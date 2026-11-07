@@ -143,9 +143,35 @@ export const verifySchema = z.object({
 
 export const newsletterSchema = z.object({ email: emailField });
 
+const GMAIL_DOMAINS = ["gmail.com", "googlemail.com"];
+// Salah ketik domain Gmail yang sering terjadi; alamat seperti ini hampir pasti tidak akan menerima email.
+const GMAIL_TYPOS = ["gmial.com", "gmai.com", "gmal.com", "gmil.com", "gmaill.com", "gamil.com", "gnail.com", "gmail.co", "gmail.con", "gmail.cm", "gmail.om", "gmail.id", "gmail.co.id", "gmail.net"];
+
+/**
+ * Aturan nama pengguna Gmail dari Google: 6–30 karakter, hanya huruf, angka, dan titik,
+ * tidak diawali/diakhiri titik, dan tidak ada dua titik berurutan. Bagian setelah "+" adalah alias dan diabaikan.
+ * Ada tidaknya akun dipastikan lewat tautan verifikasi yang dikirim ke alamat itu.
+ */
+export function gmailProblem(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  if (at < 0) return null;
+  const domain = email.slice(at + 1);
+  if (GMAIL_TYPOS.includes(domain)) return "Domain email salah ketik. Maksud kamu @gmail.com?";
+  if (!GMAIL_DOMAINS.includes(domain)) return null;
+  const user = email.slice(0, at).split("+")[0];
+  const bare = user.replace(/\./g, "");
+  if (!/^[a-z0-9.]+$/.test(user)) return "Alamat Gmail hanya boleh berisi huruf, angka, dan titik";
+  if (user.startsWith(".") || user.endsWith(".") || user.includes("..")) return "Alamat Gmail tidak valid (posisi titik salah)";
+  if (bare.length < 6 || bare.length > 30) return "Alamat Gmail tidak valid (nama pengguna Gmail 6–30 karakter)";
+  return null;
+}
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(80),
-  email: emailField,
+  email: emailField.superRefine((email, ctx) => {
+    const problem = gmailProblem(email);
+    if (problem) ctx.addIssue({ code: "custom", message: problem });
+  }),
   password: z.string().min(8, "Password minimal 8 karakter").max(72, "Password maksimal 72 karakter"),
   // Self-service roles only; ADMIN is created through the seed (ADMIN_EMAIL / ADMIN_PASSWORD).
   role: z.enum(["TRAVELER", "PRACTITIONER"]).default("TRAVELER"),
