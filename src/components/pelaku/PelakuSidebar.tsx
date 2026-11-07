@@ -6,25 +6,31 @@ import { CalendarPlus, Database, Globe, ShieldCheck, User, Users } from "lucide-
 
 type Item = { href: string; label: string; icon: typeof Globe; match: (p: string) => boolean };
 
-const profil: Item = { href: "/pelaku/profil", label: "Profil", icon: User, match: (p) => p.startsWith("/pelaku/profil") };
+// Halaman lain di bawah /destinasi/ (selain menu di bawah ini) adalah detail destinasi milik My Destination.
+const otherPelakuPages = ["/destinasi/tambah", "/destinasi/kunjungan", "/destinasi/profil"];
 
 const items: Item[] = [
-  { href: "/pelaku", label: "My Destination", icon: Globe, match: (p) => p === "/pelaku" || p.startsWith("/pelaku/destinasi") },
-  { href: "/pelaku/tambah", label: "Tambah Destinasi", icon: CalendarPlus, match: (p) => p.startsWith("/pelaku/tambah") },
-  { href: "/pelaku/kunjungan", label: "Riwayat Kunjungan", icon: Database, match: (p) => p.startsWith("/pelaku/kunjungan") },
-  profil,
+  {
+    href: "/destinasi",
+    label: "My Destination",
+    icon: Globe,
+    match: (p) => p === "/destinasi" || (p.startsWith("/destinasi/") && !otherPelakuPages.some((x) => p.startsWith(x))),
+  },
+  { href: "/destinasi/tambah", label: "Tambah Destinasi", icon: CalendarPlus, match: (p) => p.startsWith("/destinasi/tambah") },
+  { href: "/destinasi/kunjungan", label: "Riwayat Kunjungan", icon: Database, match: (p) => p.startsWith("/destinasi/kunjungan") },
+  { href: "/destinasi/profil", label: "Profil", icon: User, match: (p) => p.startsWith("/destinasi/profil") },
 ];
 
 // Kurator hanya memverifikasi data wisata dan mengelola akun; tidak menambah / mengubah wisata.
 const adminItems: Item[] = [
-  { href: "/pelaku/kurasi", label: "Kurasi", icon: ShieldCheck, match: (p) => p.startsWith("/pelaku/kurasi") },
-  { href: "/pelaku/akun", label: "Kelola Akun", icon: Users, match: (p) => p.startsWith("/pelaku/akun") },
-  profil,
+  { href: "/admin", label: "Kurasi", icon: ShieldCheck, match: (p) => p === "/admin" },
+  { href: "/admin/akun", label: "Kelola Akun", icon: Users, match: (p) => p.startsWith("/admin/akun") },
+  { href: "/admin/profil", label: "Profil", icon: User, match: (p) => p.startsWith("/admin/profil") },
 ];
 
-/** Menu samping dasbor pelaku budaya (di layar kecil menjadi baris menu yang bisa digeser). */
+/** Menu samping dasbor pelaku budaya dan kurator (di layar kecil menjadi baris menu yang bisa digeser). */
 export default function PelakuSidebar({ isAdmin }: { isAdmin: boolean }) {
-  const pathname = usePathname() ?? "/pelaku";
+  const pathname = usePathname() ?? (isAdmin ? "/admin" : "/destinasi");
   const list = isAdmin ? adminItems : items;
   return (
     <nav aria-label={isAdmin ? "Menu kurator" : "Menu pelaku budaya"}className="lg:w-[250px] lg:shrink-0">
