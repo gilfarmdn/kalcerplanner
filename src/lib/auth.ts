@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { Interest } from "@/lib/culture";
+import { roleHome } from "@/lib/role-home";
 import { COOKIE_NAME, sessionCookieOptions, signSession, verifySession } from "@/lib/session-token";
 
 export type SessionUser = { id: string; name: string; email: string };
@@ -45,11 +46,16 @@ export async function requireUser(next: string): Promise<CurrentUser> {
   return user;
 }
 
-/** Halaman khusus pelaku budaya: kurator diarahkan ke halaman kurasi. */
-export async function requirePractitioner(next: string): Promise<CurrentUser> {
+/** Halaman khusus satu jenis akun: akun lain diarahkan ke halaman utamanya (lihat roleHome). */
+export async function requireRole(role: CurrentUser["role"], next: string): Promise<CurrentUser> {
   const user = await requireUser(next);
-  if (user.role === "ADMIN") redirect("/pelaku/kurasi");
+  if (user.role !== role) redirect(roleHome(user.role));
   return user;
+}
+
+/** Halaman khusus pelaku budaya. */
+export function requirePractitioner(next: string): Promise<CurrentUser> {
+  return requireRole("PRACTITIONER", next);
 }
 
 export async function getSession(): Promise<SessionUser | null> {
