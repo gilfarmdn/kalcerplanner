@@ -36,7 +36,6 @@ export type RencanaInitial = {
 };
 
 const STEP_LABELS = ["Tujuan & Tanggal", "Preferensi Budaya", "Akomodasi & Transportasi", "Hasil Itinerary"] as const;
-const MAX_DAYS = 7;
 
 const inputClass =
   "h-12 w-full rounded-lg border border-neutral-300 bg-white px-4 text-base outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/30 disabled:bg-neutral-100";
@@ -346,7 +345,6 @@ export default function RencanaBuilder({
                     placeholder="Masukkan kota asal Anda"
                     className={inputClass}
                   />
-                  {/* <span className={hintClass}>Opsional. Hanya untuk ringkasan, belum memengaruhi rekomendasi.</span> */}
                 </label>
 
                 <label className="flex flex-col gap-2">
@@ -359,11 +357,6 @@ export default function RencanaBuilder({
                       </option>
                     ))}
                   </select>
-                  {/* <span className={hintClass}>
-                    {zones.length === 0
-                      ? "Data budaya belum tersedia. Jalankan seed database (npm run db:seed)."
-                      : "Pilihan berasal dari data budaya yang tersedia."}
-                  </span> */}
                 </label>
               </div>
 
@@ -380,7 +373,6 @@ export default function RencanaBuilder({
 
               <p className="text-lg">
                 <span className="font-semibold">Durasi:</span> {durationText}
-                {/* <span className={`ml-2 ${hintClass}`}>(dihitung dari tanggal, maksimal {MAX_DAYS} hari)</span> */}
               </p>
             </section>
           )}
