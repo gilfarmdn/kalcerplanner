@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BookOpenText, CalendarDays, HandHeart, Sparkles, Stamp } from "lucide-react";
 
 const items = [
