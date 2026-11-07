@@ -7,12 +7,14 @@ import { buttonClass, cardClass, inputClass } from "@/components/auth-styles";
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setNotFound(false);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
@@ -21,8 +23,10 @@ export default function ForgotPasswordForm() {
         body: JSON.stringify({ email }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) setError(json.error ?? "Terjadi kesalahan. Coba lagi.");
-      else setDone(true);
+      if (!res.ok) {
+        setError(json.error ?? "Terjadi kesalahan. Coba lagi.");
+        setNotFound(json.code === "EMAIL_NOT_FOUND");
+      } else setSentTo(json.email ?? email);
     } catch {
       setError("Tidak dapat terhubung ke server.");
     } finally {
@@ -30,13 +34,13 @@ export default function ForgotPasswordForm() {
     }
   }
 
-  if (done) {
+  if (sentTo) {
     return (
       <div className={cardClass}>
         <div className="flex flex-col gap-4">
           <h1 className="text-xl font-semibold">Cek email kamu</h1>
           <p className="text-base">
-            Kami sudah mengirim tautan untuk mengatur ulang password
+            Kami sudah mengirim tautan untuk mengatur ulang password ke <strong>{sentTo}</strong>.
           </p>
           <Link href="/masuk" className="text-base text-brand-link underline">Kembali ke halaman masuk</Link>
         </div>
@@ -53,7 +57,17 @@ export default function ForgotPasswordForm() {
           Email
           <input required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="gabriel@example.com" className={inputClass} />
         </label>
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+            {notFound && (
+              <>
+                {" "}
+                <Link href="/daftar" className="text-brand-link underline">Daftar sekarang</Link>
+              </>
+            )}
+          </p>
+        )}
         <button type="submit" disabled={loading} className={buttonClass}>
           {loading ? "Memproses..." : "Kirim tautan reset"}
         </button>
