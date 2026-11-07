@@ -5,6 +5,7 @@ import { Briefcase } from "lucide-react";
 import DashboardShell from "@/components/DashboardShell";
 import SiteShell from "@/components/SiteShell";
 import { requireUser } from "@/lib/auth";
+import { roleHome } from "@/lib/role-home";
 import { objectImage } from "@/lib/culture-db";
 import { formatRange, todayJakarta } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TripListPage() {
   const user = await requireUser("/trip");
-  if (user.role !== "TRAVELER") redirect("/pelaku");
+  if (user.role !== "TRAVELER") redirect(roleHome(user.role));
   const today = new Date(`${todayJakarta()}T00:00:00.000Z`);
 
   const trips = await prisma.trip.findMany({
