@@ -10,7 +10,6 @@ import {
   INTERESTS,
   OBJECT_KINDS,
   SLOTS,
-  ZONES,
   depthInfo,
   interestInfo,
   kindLabel,
@@ -284,17 +283,11 @@ export default function ObjectForm({ object }: { object?: ObjectFormValues }) {
         <input
           name="zone"
           required
-          list="zona-saran"
           minLength={2}
           maxLength={60}
           defaultValue={object?.zone}
           className={`${input} mt-1`}
         />
-        {/* <datalist id="zona-saran">
-          {ZONES.map((z) => (
-            <option key={z} value={z} />
-          ))}
-        </datalist> */}
       </label>
 
       <div className="text-sm font-medium sm:col-span-2">
