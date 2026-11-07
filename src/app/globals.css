@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white font-sans text-black antialiased;
+}
+
+@layer components {
+  .section-title {
+    @apply text-center font-serif text-3xl font-bold sm:text-[40px];
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-[10px] bg-brand-green px-4 py-2 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:text-xl;
+  }
+}
+
+.select-arrow {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231e1e1e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center; /* geser panah di sini */
+  padding-right: 2.5rem;
+}
+
+/* Bagian akun di navbar disembunyikan sampai SessionKeeper selesai memeriksa sesi (menghindari nama akun sempat tampil).
+   Bila JavaScript terlambat > 1,5 detik, bagian itu tampil sendiri. */
+html[data-kp-check="pending"] [data-auth-ui] {
+  visibility: hidden;
+  animation: kp-reveal 0s linear 1.5s forwards;
+}
+/* Sesi lama sedang dikeluarkan (semua tab sempat ditutup): sembunyikan terus sampai halaman berganti. */
+html[data-kp-check="leaving"] [data-auth-ui] {
+  visibility: hidden;
+}
+@keyframes kp-reveal {
+  to {
+    visibility: visible;
+  }
+}

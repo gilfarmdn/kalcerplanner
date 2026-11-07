@@ -1,0 +1,381 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Enums (values mirror src/lib/culture.ts — keep both in sync)      
+// ------------------------------------------------------------------
+
+enum TokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+enum Role {
+  TRAVELER
+  PRACTITIONER // pelaku budaya: sanggar, pengrajin, pengelola situs/komunitas
+  ADMIN // kurator: memverifikasi data budaya
+}
+
+// Minat budaya (tema yang dipilih wisatawan).
+enum Interest {
+  SEJARAH_CAGAR
+  MUSEUM
+  SENI_PERTUNJUKAN
+  ADAT_RITUS
+  KULINER_TRADISIONAL
+  KERAJINAN
+  BAHASA_AKSARA
+  PERMAINAN_TRADISIONAL
+  KAMPUNG_KOMUNITAS
+}
+
+enum ObjectKind {
+  SITUS
+  MUSEUM
+  PERTUNJUKAN
+  KULINER
+  WORKSHOP
+  KAMPUNG
+  PASAR
+  RUTE
+}
+
+enum VisitStatus { 
+  BOOKED 
+  ATTENDED 
+  CANCELLED 
+}
+
+enum VisitSource { 
+  ONLINE 
+  WALKIN 
+}
+
+// Kedalaman pengalaman: menikmati -> belajar -> terlibat langsung.
+enum Depth {
+  LIHAT
+  BELAJAR
+  TERLIBAT
+}
+
+enum Slot {
+  PAGI
+  SIANG
+  SORE
+  MALAM
+}
+
+enum Lodging {
+  NONE
+  HEMAT
+  STANDAR
+  NYAMAN
+}
+
+// SEED = data awal yang disusun tim (tampil publik tanpa label status).
+// PENDING = diajukan pelaku budaya, disembunyikan sampai diverifikasi.
+// HIDDEN = akun pemiliknya dihapus kurator; data disimpan tapi tidak tampil di mana pun.
+enum ObjectStatus {
+  SEED
+  PENDING
+  VERIFIED
+  REJECTED
+  HIDDEN
+}
+
+// ------------------------------------------------------------------
+// Users                                                             
+// ------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(TRAVELER)
+  /// Preferensi default, mengisi form Rencana otomatis.
+  interests    Interest[] @default([])
+  createdAt    DateTime @default(now())
+  emailVerifiedAt DateTime?
+  /// Diisi kurator saat menonaktifkan akun: tidak bisa masuk, dan baru boleh dihapus setelah nonaktif.
+  deactivatedAt DateTime?
+  /// Foto profil: "/api/images/<id>" (ImageAsset milik user ini). Kosong = avatar bawaan.
+  avatarUrl    String?
+  trips   Trip[]
+  stamps  Stamp[]
+  objects CulturalObject[]
+  tokens  AuthToken[]
+  images  ImageAsset[]
+  visits  Visit[]  
+}
+
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      TokenType
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, type])
+}
+
+// ------------------------------------------------------------------
+// Lapisan budaya                
+// ------------------------------------------------------------------
+
+model CulturalObject {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  name          String
+  kind          ObjectKind
+  interest      Interest
+  alsoInterests Interest[]   @default([])
+  zone          String // kabupaten / kota, mis. Sleman, Kota Bandung
+  address       String?
+  lat           Float
+  lng           Float
+  summary       String
+  // "Mengapa ini penting" — makna budaya.
+  meaning       String       @db.Text
+  // Etika berkunjung (satu butir per elemen).
+  etiquette     String[]     @default([])
+  // Perkiraan harga per orang dewasa (Rp). 0 = gratis / donasi.
+  priceIdr      Int          @default(0)
+  childPriceIdr Int?
+  durationMin   Int          @default(90)
+  depth         Depth        @default(LIHAT)
+  slots         Slot[]       @default([])
+  // Hari buka / tampil (0 = Minggu ... 6 = Sabtu). Kosong = setiap hari.
+  weekdays      Int[]        @default([])
+  // Jam buka / tampil, format "HH:MM" (WIB). Kosong = belum diisi.
+  openTime      String?
+  closeTime     String?
+  scheduleNote  String?
+  // Dikelola komunitas / pelaku / lembaga budaya setempat.
+  localRun      Boolean      @default(false)
+  // Kurang padat pengunjung — dipakai untuk menyebar kunjungan.
+  hiddenGem     Boolean      @default(false)
+  isEvent       Boolean      @default(false)
+  // Kuota pengunjung per tanggal (untuk event: per tanggal berlangsung). Kosong = tanpa pendaftaran.
+  dailyQuota    Int?
+  imageUrl      String?
+  source        String?
+  status        ObjectStatus @default(PENDING)
+  verifiedAt    DateTime?
+  ownerId       String?
+  owner         User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  events CulturalEvent[]
+  visits Visit[]
+  image  ObjectImage? 
+  items  TripItem[]
+  stamps Stamp[]
+
+  @@index([status, interest])
+  @@index([ownerId])
+}
+
+// Event periodik / tahunan untuk Kalender Budaya.
+// Tanggal pasti hanya diisi bila sudah diketahui (startsOn/endsOn); selain itu pakai monthHint + dateNote.
+model CulturalEvent {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  title       String
+  description String          @db.Text
+  interest    Interest?
+  zone        String?
+  objectId    String?
+  object      CulturalObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  monthHint   Int? // 1..12, "biasanya"
+  dateNote    String // mis. "Mengikuti kalender Jawa/Hijriah"
+  startsOn    DateTime?
+  endsOn      DateTime?
+  repeatsYearly Boolean       @default(false)
+  weekdays    Int[]           @default([])
+  exceptDates String[]        @default([])
+  venue       String?
+  imageUrl    String? // "/api/images/<id>" bila diunggah pelaku
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  visits      Visit[] 
+}
+
+// Foto yang diunggah pelaku (destinasi / event). Disimpan langsung di database dan
+// disajikan lewat /api/images/<id>; URL itu yang dicatat di kolom imageUrl.
+model ImageAsset {
+  id         String   @id @default(cuid())
+  mimeType   String
+  size       Int
+  data       Bytes
+  uploaderId String?
+  uploader   User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([uploaderId])
+}
+
+// ------------------------------------------------------------------
+// Rencana perjalanan & Paspor Budaya                                
+// ------------------------------------------------------------------
+
+model Trip {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  style          String // SEIMBANG | MENDALAM | HEMAT
+  startDate      DateTime
+  endDate        DateTime
+  adults         Int      @default(1)
+  children       Int      @default(0)
+  budget         Int?
+  originCostIdr  Int      @default(0)
+  lodging        Lodging  @default(STANDAR)
+  rooms          Int      @default(1)
+  includeSouvenir Boolean @default(false)
+  localTransport Boolean  @default(false)
+  interests      Interest[] @default([])
+  depth          Depth    @default(BELAJAR)
+  spreadTourism  Boolean  @default(false)
+
+  costTickets    Int      @default(0)
+  costMeals      Int      @default(0)
+  costLocal      Int      @default(0)
+  costLodging    Int      @default(0)
+  totalIdr       Int      @default(0)
+  // Rp tiket/kelas yang mengalir ke pengelola & pelaku budaya setempat.
+  impactIdr      Int      @default(0)
+  notes          String[] @default([])
+  createdAt      DateTime @default(now())
+
+  items  TripItem[]
+  stamps Stamp[]
+
+  @@index([userId, startDate])
+}
+
+model TripItem {
+  id        String         @id @default(cuid())
+  tripId    String
+  trip      Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  objectId  String
+  object    CulturalObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  dayIndex  Int // 0-based
+  slot      Slot
+  sortOrder Int
+  // Snapshot harga untuk seluruh rombongan (Rp).
+  priceIdr  Int            @default(0)
+  // Alasan rekomendasi (explainable).
+  reasons   String[]       @default([])
+
+  @@index([tripId, dayIndex, sortOrder])
+}
+
+// Stempel di Paspor Budaya. Hanya bisa diklaim untuk tempat dalam rencana milik sendiri, mulai hari keberangkatan.
+model Stamp {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  objectId  String
+  object    CulturalObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  tripId    String?
+  trip      Trip?          @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  // "Yang kupelajari" — catatan singkat pengguna.
+  note      String?        @db.Text
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, objectId])
+  @@index([userId, createdAt])
+}
+
+// ------------------------------------------------------------------
+// Konten landing page                                               
+// ------------------------------------------------------------------
+
+// "Highlight Jelajah" cards on the landing page.
+model Highlight {
+  id        String   @id @default(cuid())
+  title     String
+  imageUrl  String
+  href      String   @default("/jelajah")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// Traveller reviews ("Ulasan"). User-submitted reviews start unpublished.
+model Review {
+  id          String   @id @default(cuid())
+  authorName  String
+  authorRole  String?
+  avatarUrl   String?
+  rating      Int
+  content     String   @db.Text
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Story {
+  id          String   @id @default(cuid())
+  name        String
+  origin      String // asal daerah
+  avatarUrl   String? // foto profil (path atau URL)
+  content     String   @db.Text
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Visit {
+  id          String         @id @default(cuid())
+  objectId    String
+  object      CulturalObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  eventId     String?
+  event       CulturalEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorName String
+  contact     String?
+  partySize   Int            @default(1)
+  visitDate   DateTime       @db.Date
+  status      VisitStatus    @default(BOOKED)
+  source      VisitSource    @default(ONLINE)
+  note        String?
+  // Diisi saat pengelola membatalkan / mengubah jadwal; ditampilkan di rencana pengguna.
+  changeNotice String?
+  changedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Satu pendaftaran per pengguna per tempat per tanggal (baris yang dibatalkan dipakai ulang saat mendaftar lagi).
+  @@unique([userId, objectId, visitDate])
+  @@index([objectId, visitDate])
+  @@index([userId])
+}
+
+model ObjectImage {
+  id        String         @id @default(cuid())
+  objectId  String         @unique
+  object    CulturalObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  mime      String
+  data      Bytes
+  size      Int
+  createdAt DateTime       @default(now())
+}

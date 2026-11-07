@@ -1,0 +1,60 @@
+import type { Metadata } from "next";
+import RencanaBuilder, { type RencanaInitial } from "@/components/RencanaBuilder";
+import SiteShell from "@/components/SiteShell";
+import { requireUser } from "@/lib/auth";
+import { INTERESTS, isInterest, type Interest } from "@/lib/culture";
+import { VISIBLE_STATUSES } from "@/lib/culture-db";
+import { prisma } from "@/lib/prisma";
+
+export const generateMetadata = (): Metadata => ({ title: "Rencana — KalcerPlanner" });
+export const dynamic = "force-dynamic";
+
+type SP = Record<string, string | string[] | undefined>;
+
+const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+const date = (v: string | string[] | undefined) => (/^\d{4}-\d{2}-\d{2}$/.test(first(v)) ? first(v) : "");
+const int = (v: string | string[] | undefined, min: number, max: number, fallback: number) => {
+  const n = Number.parseInt(first(v), 10);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+};
+const interestList = (v: string | string[] | undefined): Interest[] =>
+  first(v)
+    .split(",")
+    .filter(isInterest)
+    .slice(0, INTERESTS.length);
+
+export default async function RencanaPage({ searchParams }: { searchParams: SP }) {
+  // Rencana hanya untuk pengguna yang sudah masuk; isian dari landing page ikut dibawa lewat ?next.
+  const query = new URLSearchParams(
+    Object.entries(searchParams).flatMap(([k, v]) => (v === undefined ? [] : (Array.isArray(v) ? v : [v]).map((x) => [k, x]))),
+  ).toString();
+  const user = await requireUser(query ? `/rencana?${query}` : "/rencana");
+
+  // Pilihan wilayah tujuan diambil dari database (nilai `zone` objek yang tampil), jadi selalu cocok dengan data.
+  const zoneRows = await prisma.culturalObject.findMany({
+    where: { status: { in: [...VISIBLE_STATUSES] } },
+    distinct: ["zone"],
+    select: { zone: true },
+    orderBy: { zone: "asc" },
+  });
+  const zones = zoneRows.map((r) => r.zone);
+
+  // Values can come from the homepage "RENCANA" box (via ?query) — sanitise before use.
+  // When nothing is given, the signed-in user's saved interests are the default.
+  const fromQuery = interestList(searchParams.minat);
+  const initial: RencanaInitial = {
+    startDate: date(searchParams.pergi),
+    endDate: date(searchParams.pulang),
+    adults: int(searchParams.dewasa, 1, 20, 1),
+    children: int(searchParams.anak, 0, 20, 0),
+    budget: first(searchParams.anggaran).replace(/\D/g, "").slice(0, 10),
+    interests: fromQuery.length ? fromQuery : (user?.interests ?? []),
+    zone: zones.includes(first(searchParams.wilayah)) ? first(searchParams.wilayah) : zones.length === 1 ? zones[0] : "",
+  };
+
+  return (
+    <SiteShell>
+      <RencanaBuilder initial={initial} isLoggedIn={!!user} zones={zones} />
+    </SiteShell>
+  );
+}

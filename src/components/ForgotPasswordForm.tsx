@@ -1,0 +1,64 @@
+"use client";
+
+import Link from "next/link";
+import { FormEvent, useState } from "react";
+import { buttonClass, cardClass, inputClass } from "@/components/auth-styles";
+
+export default function ForgotPasswordForm() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) setError(json.error ?? "Terjadi kesalahan. Coba lagi.");
+      else setDone(true);
+    } catch {
+      setError("Tidak dapat terhubung ke server.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div className={cardClass}>
+        <div className="flex flex-col gap-4">
+          <h1 className="text-xl font-semibold">Cek email kamu</h1>
+          <p className="text-base">
+            Kami sudah mengirim tautan untuk mengatur ulang password
+          </p>
+          <Link href="/masuk" className="text-base text-brand-link underline">Kembali ke halaman masuk</Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={onSubmit} className={cardClass}>
+      <div className="flex flex-col gap-6">
+        <h1 className="text-xl font-semibold">Lupa password</h1>
+        <p className="text-base">Masukkan email akun kamu. Kami akan mengirim tautan untuk membuat password baru.</p>
+        <label className="flex flex-col gap-2 text-base">
+          Email
+          <input required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="gabriel@example.com" className={inputClass} />
+        </label>
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <button type="submit" disabled={loading} className={buttonClass}>
+          {loading ? "Memproses..." : "Kirim tautan reset"}
+        </button>
+        <Link href="/masuk" className="text-base text-brand-link underline">Kembali ke halaman masuk</Link>
+      </div>
+    </form>
+  );
+}
