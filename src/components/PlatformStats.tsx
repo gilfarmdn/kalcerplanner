@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { VISIBLE_STATUSES, visibleEvent } from "@/lib/culture-db";
 import { prisma } from "@/lib/prisma";
 
