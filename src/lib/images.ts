@@ -42,18 +42,3 @@ export async function resolveImageUrl(
   return found ? imageUrlFor(found.id) : false;
 }
 
-/** Hapus gambar unggahan lama bila sudah diganti/dilepas dan tidak dipakai lagi. Tidak pernah melempar galat. */
-export async function deleteImageIfUnused(oldUrl: string | null | undefined, newUrl?: string | null) {
-  const id = imageIdFromUrl(oldUrl);
-  if (!id || oldUrl === newUrl) return;
-  try {
-    const url = imageUrlFor(id);
-    const [objects, events] = await Promise.all([
-      prisma.culturalObject.count({ where: { imageUrl: url } }),
-      prisma.culturalEvent.count({ where: { imageUrl: url } }),
-    ]);
-    if (objects + events === 0) await prisma.imageAsset.deleteMany({ where: { id } });
-  } catch (error) {
-    console.error("[images] cleanup failed", error);
-  }
-}
