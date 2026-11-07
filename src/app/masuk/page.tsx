@@ -9,8 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MasukPage({ searchParams }: { searchParams: { next?: string | string[]; info?: string | string[] } }) {
   const info = Array.isArray(searchParams.info) ? searchParams.info[0] : searchParams.info;
-  const next = safeNext(searchParams.next, "/rencana");
-  const explicitNext = safeNext(searchParams.next, "") !== "";
+  const next = safeNext(searchParams.next, "");
 
   return (
     <AuthLayout>
@@ -20,7 +19,7 @@ export default async function MasukPage({ searchParams }: { searchParams: { next
           Sesi berakhir karena tidak ada aktivitas. Silakan masuk kembali.
         </p>
       )}
-      <AuthForm mode="login" next={next} explicitNext={explicitNext} />
+      <AuthForm mode="login" next={next} />
     </AuthLayout>
   );
 }
