@@ -5,6 +5,8 @@ import { createSession } from "@/lib/auth";
 import { readBody } from "@/lib/api";
 import { err, TOO_MANY } from "@/lib/auth-api";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { roleHome } from "@/lib/role-home";
+import { safeNext } from "@/lib/safe-next";
 import { loginSchema } from "@/lib/validators";
 
 export async function POST(req: Request) {
@@ -33,7 +35,12 @@ export async function POST(req: Request) {
     }
 
     await createSession({ id: user.id, name: user.name, email: user.email });
-    return NextResponse.json({ ok: true, role: user.role });
+
+    // Setiap login berakhir di halaman utama akunnya, apa pun tujuan yang terbawa dari kunjungan sebelumnya.
+    // Satu-satunya pengecualian: wisatawan yang masuk dari tombol "Simpan Rencana" agar rencananya tidak hilang.
+    const next = safeNext((body as { next?: unknown }).next as string | undefined, "");
+    const redirectTo = user.role === "TRAVELER" && next.startsWith("/rencana/simpan?") ? next : roleHome(user.role);
+    return NextResponse.json({ ok: true, role: user.role, redirect: redirectTo });
   } catch (error) {
     console.error("[auth/login] failed", error);
     return err("Terjadi kesalahan. Coba lagi.", 500);
