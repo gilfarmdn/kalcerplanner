@@ -1,6 +1,6 @@
 # KalcerPlanner.id
 
-Platform perjalanan budaya Indonesia. **Pilot: Daerah Istimewa Yogyakarta.**
+Platform perjalanan budaya Indonesia.
 Bukan sekadar itinerary: setiap rekomendasi menjelaskan *mengapa* dipilih, *apa maknanya*, *bagaimana bersikap*, dan *berapa rupiah yang mengalir ke pelaku budaya setempat*.
 
 **Stack:** Next.js 14 (App Router) · React 18 · TypeScript · Tailwind CSS · Prisma 5 · PostgreSQL 16 · Docker
