@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { err, findManageableObject, firstIssueId, guardPelaku, readJson, toDay, uniqueSlug } from "@/lib/pelaku-api";
+import { err, findManageableObject, firstIssueId, guardPelaku, readJson, uniqueSlug } from "@/lib/pelaku-api";
 import { eventSchema } from "@/lib/pelaku-validators";
 import { eventScheduleData } from "@/lib/pelaku-api";
 
