@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import RencanaBuilder, { type RencanaInitial } from "@/components/RencanaBuilder";
 import SiteShell from "@/components/SiteShell";
-import { requireUser } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
 import { INTERESTS, isInterest, type Interest } from "@/lib/culture";
 import { VISIBLE_STATUSES } from "@/lib/culture-db";
 import { prisma } from "@/lib/prisma";
@@ -24,11 +24,8 @@ const interestList = (v: string | string[] | undefined): Interest[] =>
     .slice(0, INTERESTS.length);
 
 export default async function RencanaPage({ searchParams }: { searchParams: SP }) {
-  // Rencana hanya untuk pengguna yang sudah masuk; isian dari landing page ikut dibawa lewat ?next.
-  const query = new URLSearchParams(
-    Object.entries(searchParams).flatMap(([k, v]) => (v === undefined ? [] : (Array.isArray(v) ? v : [v]).map((x) => [k, x]))),
-  ).toString();
-  const user = await requireUser(query ? `/rencana?${query}` : "/rencana");
+  // Rencana terbuka untuk semua pengunjung; hanya menyimpan ke My Trip yang perlu masuk (lihat PlanResults).
+  const user = await getUser();
 
   // Pilihan wilayah tujuan diambil dari database (nilai `zone` objek yang tampil), jadi selalu cocok dengan data.
   const zoneRows = await prisma.culturalObject.findMany({
