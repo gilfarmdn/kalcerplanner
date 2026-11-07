@@ -6,8 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, Globe, LogOut, Menu, User, X } from "lucide-react";
 import { navLinks } from "@/lib/content";
+import { roleHome, type Role } from "@/lib/role-home";
 
-export default function Navbar({ user }: { user: { name: string; role?: string; avatarUrl?: string | null } | null }) {
+export default function Navbar({ user }: { user: { name: string; role?: Role; avatarUrl?: string | null } | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -46,7 +47,7 @@ export default function Navbar({ user }: { user: { name: string; role?: string; 
       style={user && !accountShown ? { visibility: "hidden" } : undefined}
     >
       <Link
-        href={user.role && user.role !== "TRAVELER" ? "/pelaku" : "/trip"}
+        href={roleHome(user.role ?? "TRAVELER")}
         onClick={() => setOpen(false)}
         title="My Trip"
         className="inline-flex max-w-[160px] items-center gap-1.5 truncate rounded-[10px] bg-brand-green px-3 py-2 text-base font-semibold text-white hover:brightness-110"
