@@ -19,7 +19,7 @@ export default function DeleteDestinationButton({ id, name }: { id: string; name
         setError(json.error ?? "Gagal menghapus.");
         return;
       }
-      router.push("/pelaku");
+      router.push("/destinasi");
       router.refresh();
     } catch {
       setError("Tidak dapat terhubung ke server.");
