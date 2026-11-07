@@ -83,11 +83,6 @@ export default function EventCalendar({
   const cells = monthCells(year, month);
   const selectedItems = itemsOn(selected);
 
-  // Event yang tanggalnya belum pasti: tidak bisa ditempatkan di kotak tanggal, jadi dicantumkan terpisah.
-  const undated = visibleEvents
-    .filter((e) => !e.startsOn)
-    .sort((a, b) => (a.monthHint ?? 99) - (b.monthHint ?? 99));
-
   const navBtn = "flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 hover:bg-neutral-50";
 
   return (
