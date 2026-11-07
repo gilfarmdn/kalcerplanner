@@ -5,6 +5,7 @@ import CancelVisitButton from "@/components/CancelVisitButton";
 import DashboardShell from "@/components/DashboardShell";
 import SiteShell from "@/components/SiteShell";
 import { requireUser } from "@/lib/auth";
+import { roleHome } from "@/lib/role-home";
 import { canCancel } from "@/lib/kuota";
 import { dayString } from "@/lib/pelaku-api";
 import { prisma } from "@/lib/prisma";
@@ -22,7 +23,7 @@ const statusInfo = {
 /** Semua pendaftaran kunjungan milik pengguna: yang akan datang (bisa dibatalkan s.d. H-1) dan riwayatnya. */
 export default async function KunjunganPage() {
   const user = await requireUser("/kunjungan");
-  if (user.role !== "TRAVELER") redirect("/pelaku");
+  if (user.role !== "TRAVELER") redirect(roleHome(user.role));
 
   const today = hariIniJakarta();
   const visits = await prisma.visit.findMany({
