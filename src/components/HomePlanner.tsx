@@ -8,10 +8,10 @@ const fieldClass =
   "h-7 w-full rounded-[5px] border border-[rgba(248,168,31,0.8)] bg-transparent px-2 text-[10px] text-white outline-none placeholder:text-white/70 focus:ring-1 focus:ring-yellow-200 [color-scheme:dark]";
 
 /**
- * "RENCANA" box in the hero. Clicking "Buat Rencana Otomatis" always leads to the login page
- * for visitors who are not signed in (they return to /rencana afterwards with the form prefilled).
+ * "RENCANA" box in the hero. Clicking "Buat Rencana Otomatis" opens /rencana with the form prefilled;
+ * signing in is only needed to save the result.
  */
-export default function HomePlanner({ isLoggedIn }: { isLoggedIn: boolean }) {
+export default function HomePlanner() {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const [pergi, setPergi] = useState("");
@@ -30,8 +30,7 @@ export default function HomePlanner({ isLoggedIn }: { isLoggedIn: boolean }) {
     params.set("dewasa", String(dewasa));
     params.set("anak", String(anak));
 
-    const target = `/rencana?${params.toString()}`;
-    router.push(isLoggedIn ? target : `/masuk?next=${encodeURIComponent(target)}`);
+    router.push(`/rencana?${params.toString()}`);
   }
 
   return (
