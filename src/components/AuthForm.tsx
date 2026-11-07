@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { buttonClass, cardClass, inputClass } from "@/components/auth-styles";
 
 type Props = {
   mode: "login" | "register";
+  /** Dibawa lewat ?next=. Setelah login hanya dipakai untuk "Simpan Rencana"; selain itu ke halaman utama akun. */
   next: string;
-  /** true bila tujuan dibawa lewat tautan (?next=...). Tanpa itu, pelaku budaya diarahkan ke dasbornya. */
-  explicitNext?: boolean;
 };
 
-export default function AuthForm({ mode, next, explicitNext = false }: Props) {
-  const router = useRouter();
+export default function AuthForm({ mode, next }: Props) {
   const isLogin = mode === "login";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,7 +32,7 @@ export default function AuthForm({ mode, next, explicitNext = false }: Props) {
       const res = await fetch(isLogin ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isLogin ? { email, password } : { name, email, password, role, next }),
+        body: JSON.stringify(isLogin ? { email, password, next } : { name, email, password, role, next }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -50,9 +47,8 @@ export default function AuthForm({ mode, next, explicitNext = false }: Props) {
         }
         return;
       }
-      const isPelaku = json.role === "PRACTITIONER" || json.role === "ADMIN";
-      router.push(!explicitNext && isPelaku ? "/pelaku" : next);
-      router.refresh();
+      // Tujuan ditentukan server sesuai jenis akun. Muat halaman penuh agar tidak ada tampilan sisa sesi sebelumnya.
+      window.location.assign(json.redirect ?? "/");
     } catch {
       setError("Tidak dapat terhubung ke server.");
     } finally {
@@ -80,8 +76,9 @@ export default function AuthForm({ mode, next, explicitNext = false }: Props) {
     }
   }
 
-  const loginHref = `/masuk?next=${encodeURIComponent(next)}`;
-  const otherHref = `${isLogin ? "/daftar" : "/masuk"}?next=${encodeURIComponent(next)}`;
+  const withNext = (path: string) => (next ? `${path}?next=${encodeURIComponent(next)}` : path);
+  const loginHref = withNext("/masuk");
+  const otherHref = withNext(isLogin ? "/daftar" : "/masuk");
 
   if (sentTo) {
     return (
