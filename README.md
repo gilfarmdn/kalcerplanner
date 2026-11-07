@@ -69,8 +69,7 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 - Harga tiket, jam buka, **jadwal pentas**, dan koordinat adalah **perkiraan** dan **belum diverifikasi**. Objek berstatus `SEED` dan tampil dengan label "Data pilot · menunggu verifikasi" di aplikasi.
 - Tanggal event tidak diisi pasti (banyak yang mengikuti kalender Jawa/Hijriah); aplikasi menampilkan petunjuk bulan atau catatan kalender dan meminta pengguna mengecek kanal resmi.
 - Asumsi biaya (makan Rp60.000/hari/dewasa, transportasi lokal Rp60.000/hari, tarif kamar per kelas, tiket anak 50%) ada di `src/lib/culture.ts` (`COST`, `lodgingInfo`). Itu estimasi.
-- Sebelum dipakai di luar demo: verifikasi ke pengelola/Dinas Kebudayaan DIY, lalu ubah status menjadi `VERIFIED` lewat `/admin` (akun ADMIN) atau Prisma Studio. Seed ulang hanya menimpa objek yang masih `SEED`; objek `VERIFIED` tidak pernah ditimpa.
-- Foto belum ada: aplikasi memakai gambar placeholder dinamis `/api/placeholder/<slug>`. Isi kolom `imageUrl` untuk mengganti.
+- Sebelum dipakai di luar demo: verifikasi ke pengelola, lalu ubah status menjadi `VERIFIED` lewat `/admin` (akun ADMIN) atau Prisma Studio. Seed ulang hanya menimpa objek yang masih `SEED`; objek `VERIFIED` tidak pernah ditimpa.
 
 ## Mengganti gambar placeholder
 
@@ -94,9 +93,6 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 
 ## Catatan
 
-- Kode ini **belum pernah dibuild/ditest end-to-end** di lingkungan pembuatnya (registri npm tidak dapat diakses). Mesin rekomendasi dan data seed lulus `npm run check:planner`. Jalankan `npm install && npm run typecheck && npm run build` di mesinmu, dan perbaiki bila ada galat tipe yang terlewat.
-- Pilot dibatasi 7 hari per rencana dan satu wilayah (DIY).
-- Belum ada rate limiting, verifikasi email, atau reset password. Tambahkan sebelum dipublikasikan.
 - Stempel Paspor Budaya hanya bisa diklaim untuk tempat dalam rencana milik sendiri, mulai hari keberangkatan. Itu pencegahan penyalahgunaan ringan, bukan bukti kehadiran (belum ada geofence/QR).
 - Tidak ada `package-lock.json`; jalankan `npm install` sekali lalu commit (Dockerfile memakai `npm ci` jika ada).
 - Set `COOKIE_SECURE=true` bila diakses lewat HTTPS. Untuk produksi, ganti `prisma db push` dengan `prisma migrate`.
