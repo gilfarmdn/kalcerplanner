@@ -170,7 +170,7 @@ export default function ObjectForm({ object }: { object?: ObjectFormValues }) {
               ok: false,
               text: `Destinasi tersimpan, tetapi foto gagal diunggah: ${photoError instanceof Error ? photoError.message : "galat"}. Unggah ulang di halaman detail.`,
             });
-            router.push(`/pelaku/destinasi/${json.id}`);
+            router.push(`/destinasi/${json.id}`);
             router.refresh();
             return;
           }
@@ -183,7 +183,7 @@ export default function ObjectForm({ object }: { object?: ObjectFormValues }) {
         });
         router.refresh();
       } else {
-        router.push("/pelaku");
+        router.push("/destinasi");
         router.refresh();
       }
     } catch {
