@@ -14,7 +14,7 @@ docker compose up --build
 
 Buka http://localhost:3000. Compose menjalankan PostgreSQL, job `migrate` satu kali (membuat tabel + seed data Yogyakarta), lalu aplikasi.
 
-- **Akun kurator (opsional):** isi `ADMIN_EMAIL` dan `ADMIN_PASSWORD` di `.env` sebelum `docker compose up`. Seed membuat akun ADMIN yang bisa memverifikasi pengajuan di `/pelaku`.
+- **Akun kurator (opsional):** isi `ADMIN_EMAIL` dan `ADMIN_PASSWORD` di `.env` sebelum `docker compose up`. Seed membuat akun ADMIN yang bisa memverifikasi pengajuan di `/admin`.
 - **Upgrade dari versi sebelumnya:** skema berubah besar (tabel `TripRequest` dan `Partner` dihapus). Jalankan sekali `docker compose down -v` lalu `docker compose up --build` agar database dibuat ulang. Data lama (akun, rencana lama) ikut terhapus.
 - Jika mengubah nilai `POSTGRES_*` setelah run pertama, reset volume dengan `docker compose down -v`.
 
@@ -34,17 +34,19 @@ npm run check:planner       # uji mesin rekomendasi (tanpa database)
 
 | Rute | Isi |
 | --- | --- |
-| `/` | Landing: hero + kotak RENCANA (pengunjung diarahkan ke login), highlight, keunggulan, statistik pilot nyata dari database |
-| `/rencana` | Form lengkap → **3 gaya rencana** (Seimbang, Mendalam & Berdampak, Hemat Cerdas) dengan alasan tiap tempat, rincian biaya, dampak lokal, saran oleh-oleh dari sisa anggaran. **Cek Rekomendasi wajib login** |
-| `/trip`, `/trip/[id]` | My Trip: daftar dan detail rencana tersimpan; klaim stempel setelah hari keberangkatan |
+| `/` | Landing: hero, highlight, keunggulan, statistik pilot nyata dari database |
+| `/rencana` | Form lengkap → **3 gaya rencana** (Seimbang, Mendalam & Berdampak, Hemat Cerdas) dengan alasan tiap tempat, rincian biaya, dampak lokal, saran oleh-oleh dari sisa anggaran. Terbuka tanpa login; **menyimpan ke My Trip wajib login** |
+| `/trip`, `/trip/[id]` | **Wisatawan** — My Trip: daftar dan detail rencana tersimpan; klaim stempel setelah hari keberangkatan |
 | `/jejak` | **Paspor Budaya**: stempel, catatan "yang kupelajari", lencana per tema, dampak teralokasi |
 | `/profil` | Nama dan minat favorit (mengisi form Rencana) |
 | `/jelajah`, `/jelajah/[slug]` | Objek budaya dari database: makna ("Mengapa ini penting"), etika berkunjung, info praktis, event terkait |
 | `/kalender` | Event tahunan/periodik + pertunjukan rutin |
-| `/pelaku` | **Pelaku budaya** mengajukan tempat/kegiatan; **kurator (ADMIN)** memverifikasi/menolak dan menandai "dikelola pelaku setempat" |
+| `/destinasi` (`/tambah`, `/[id]`, `/kunjungan`, `/profil`) | **Pelaku budaya** — My Destination: mengajukan dan mengelola tempat/kegiatan, riwayat kunjungan |
+| `/admin` (`/akun`, `/profil`) | **Kurator (ADMIN)** — kurasi: memverifikasi/menolak dan menandai "dikelola pelaku setempat"; kelola akun |
+| `/pelaku/*` | Alamat lama; dialihkan otomatis ke `/destinasi/*` atau `/admin/*` |
 | `/umkm` | Galeri UMKM dengan cerita di balik tiap oleh-oleh |
 | `/bantuan` | Ulasan (menunggu moderasi) + FAQ |
-| `/masuk`, `/daftar` | Login / daftar (wisatawan atau pelaku budaya) |
+| `/masuk`, `/daftar` | Login / daftar (wisatawan atau pelaku budaya). Setelah login selalu ke halaman utama akun: wisatawan `/trip`, pelaku budaya `/destinasi`, kurator `/admin` (kecuali wisatawan yang masuk dari "Simpan Rencana") |
 
 ### Yang sengaja dihapus dari desain Figma awal
 Pembayaran/"Bayar" dan "Pesan Sekarang", pilihan maskapai & bintang hotel sebagai inti hasil, "Riwayat Transaksi" (diganti **Jejak Budaya**), dan strip "Mitra Perjalanan" generik. KalcerPlanner tidak memproses pembayaran; pengguna memesan langsung ke pengelola.
@@ -67,7 +69,7 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 - Harga tiket, jam buka, **jadwal pentas**, dan koordinat adalah **perkiraan** dan **belum diverifikasi**. Objek berstatus `SEED` dan tampil dengan label "Data pilot · menunggu verifikasi" di aplikasi.
 - Tanggal event tidak diisi pasti (banyak yang mengikuti kalender Jawa/Hijriah); aplikasi menampilkan petunjuk bulan atau catatan kalender dan meminta pengguna mengecek kanal resmi.
 - Asumsi biaya (makan Rp60.000/hari/dewasa, transportasi lokal Rp60.000/hari, tarif kamar per kelas, tiket anak 50%) ada di `src/lib/culture.ts` (`COST`, `lodgingInfo`). Itu estimasi.
-- Sebelum dipakai di luar demo: verifikasi ke pengelola/Dinas Kebudayaan DIY, lalu ubah status menjadi `VERIFIED` lewat `/pelaku` (akun ADMIN) atau Prisma Studio. Seed ulang hanya menimpa objek yang masih `SEED`; objek `VERIFIED` tidak pernah ditimpa.
+- Sebelum dipakai di luar demo: verifikasi ke pengelola/Dinas Kebudayaan DIY, lalu ubah status menjadi `VERIFIED` lewat `/admin` (akun ADMIN) atau Prisma Studio. Seed ulang hanya menimpa objek yang masih `SEED`; objek `VERIFIED` tidak pernah ditimpa.
 - Foto belum ada: aplikasi memakai gambar placeholder dinamis `/api/placeholder/<slug>`. Isi kolom `imageUrl` untuk mengganti.
 
 ## Mengganti gambar placeholder
@@ -76,7 +78,7 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 - `public/images/hero.svg` — latar hero / login / banner Jelajah
 - `public/images/umkm/*.svg` — 6 produk UMKM (ubah path di `src/lib/content.ts`)
 - `public/images/avatar.svg` — avatar ulasan
-- Objek budaya: set `imageUrl` per objek (Prisma Studio atau `/pelaku`)
+- Objek budaya: set `imageUrl` per objek (Prisma Studio atau `/destinasi`)
 
 ## Skrip
 
