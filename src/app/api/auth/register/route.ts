@@ -18,14 +18,19 @@ export async function POST(req: Request) {
   if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
   try {
-    const existing = await prisma.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } });
-    if (existing) return err("Email sudah terdaftar. Silakan masuk.", 409);
+    const existing = await prisma.user.findUnique({
+      where: { email: parsed.data.email },
+      select: { id: true, emailVerifiedAt: true },
+    });
+    if (existing?.emailVerifiedAt) return err("Email sudah terdaftar. Silakan masuk.", 409);
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
-    const user = await prisma.user.create({
-      data: { name: parsed.data.name, email: parsed.data.email, passwordHash, role: parsed.data.role },
-      select: { id: true, name: true, email: true },
-    });
+    const data = { name: parsed.data.name, passwordHash, role: parsed.data.role };
+    // Akun yang belum pernah diverifikasi belum terbukti milik siapa pun (bisa salah ketik atau alamat palsu),
+    // jadi pendaftaran ulang menimpanya dan mengirim tautan verifikasi baru, bukan mengunci alamat itu.
+    const user = existing
+      ? await prisma.user.update({ where: { id: existing.id }, data, select: { id: true, name: true, email: true } })
+      : await prisma.user.create({ data: { ...data, email: parsed.data.email }, select: { id: true, name: true, email: true } });
 
     let emailSent = true;
     try {
