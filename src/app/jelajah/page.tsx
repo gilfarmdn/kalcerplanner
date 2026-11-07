@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import InterestSection, { type JelajahItem } from "@/components/InterestSection";
 import SiteShell from "@/components/SiteShell";
 import { INTERESTS, interestInfo } from "@/lib/culture";
@@ -41,9 +40,6 @@ export default async function JelajahPage() {
           <p className="mt-6 max-w-[515px] font-serif text-[15px]">
             Setiap tempat dilengkapi makna budaya dan etika berkunjung
           </p>
-          {/* <Link href="/rencana" className="btn-primary mt-6 w-fit bg-brand-orange">
-            Susun rencana otomatis
-          </Link> */}
         </div>
       </section>
 
