@@ -7,6 +7,7 @@ import { DeleteTripButton, StampButton } from "@/components/TripActions";
 import StatusBadge from "@/components/ui/StatusBadge";
 import VisitRegistration, { RegisterAll } from "@/components/VisitRegistration";
 import { requireUser } from "@/lib/auth";
+import { roleHome } from "@/lib/role-home";
 import { pickSouvenirs } from "@/lib/content";
 import { formatRupiah, kindLabel, slotInfo, styleLabel, weekdayNames } from "@/lib/culture";
 import { formatHariPanjang, formatRentang, hariIniJakarta } from "@/lib/tanggal";
@@ -21,7 +22,7 @@ const DAY_MS = 86_400_000;
 
 export default async function TripDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser(`/trip/${params.id}`);
-  if (user.role !== "TRAVELER") redirect("/pelaku");
+  if (user.role !== "TRAVELER") redirect(roleHome(user.role));
 
   const trip = await prisma.trip.findFirst({
     where: { id: params.id, userId: user.id },
