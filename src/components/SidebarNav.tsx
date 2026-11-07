@@ -16,12 +16,10 @@ export default function SidebarNav({
   items,
   pathname,
   label,
-  children,
 }: {
   items: SidebarItem[];
   pathname: string;
   label: string;
-  children?: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -84,7 +82,6 @@ export default function SidebarNav({
           );
         })}
       </ul>
-      {children}
     </nav>
   );
 }
