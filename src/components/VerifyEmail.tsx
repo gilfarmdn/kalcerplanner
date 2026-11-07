@@ -51,9 +51,6 @@ export default function VerifyEmail({ token, next }: { token: string; next: stri
           <>
             <h1 className="text-xl font-semibold">Verifikasi gagal</h1>
             <p role="alert" className="text-base">{message}</p>
-            {/* <p className="text-sm text-neutral-600">
-              Jika tautan sudah dipakai, akun kamu mungkin sudah aktif. Coba masuk; bila belum bisa, kirim ulang email verifikasi dari halaman masuk.
-            </p> */}
             <Link href={loginHref} className="text-base text-brand-link underline">Ke halaman masuk</Link>
           </>
         )}
