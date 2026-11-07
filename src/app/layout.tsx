@@ -1,26 +1,36 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import SessionKeeper from "@/components/SessionKeeper";
 import { getSession } from "@/lib/auth";
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+// File font (subset Latin, lisensi OFL) disimpan di ./fonts agar build tidak bergantung pada Google Fonts.
+const playfair = localFont({
+  src: "./fonts/playfair-display-latin-wght.woff2",
+  weight: "400 900",
   variable: "--font-playfair",
   display: "swap",
 });
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+const poppins = localFont({
+  // next/font hanya menerima nilai literal, jadi tiap file ditulis satu per satu.
+  src: [
+    { path: "./fonts/poppins-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/poppins-latin-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "./fonts/poppins-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/poppins-latin-500-italic.woff2", weight: "500", style: "italic" },
+    { path: "./fonts/poppins-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/poppins-latin-600-italic.woff2", weight: "600", style: "italic" },
+    { path: "./fonts/poppins-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/poppins-latin-700-italic.woff2", weight: "700", style: "italic" },
+  ],
   variable: "--font-poppins",
   display: "swap",
 });
 
-const inter = Inter({
-  subsets: ["latin"],
+const inter = localFont({
+  src: "./fonts/inter-latin-wght.woff2",
+  weight: "100 900",
   variable: "--font-inter",
   display: "swap",
 });
