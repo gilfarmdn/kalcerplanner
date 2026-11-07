@@ -62,15 +62,6 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 
 **Angka "dampak lokal"** = total tiket/kelas pada tempat yang ditandai `localRun` (dikelola pelaku/komunitas/lembaga budaya setempat) ÷ total tiket. Penandaan itu keputusan kurator; ini perkiraan alokasi, bukan data transaksi riil.
 
-## Data pilot: baca ini sebelum demo
-
-`prisma/data/yogyakarta.ts` berisi **30 objek budaya** dan **6 event**. Itu kerangka awal yang disusun tim:
-
-- Harga tiket, jam buka, **jadwal pentas**, dan koordinat adalah **perkiraan** dan **belum diverifikasi**. Objek berstatus `SEED` dan tampil dengan label "Data pilot · menunggu verifikasi" di aplikasi.
-- Tanggal event tidak diisi pasti (banyak yang mengikuti kalender Jawa/Hijriah); aplikasi menampilkan petunjuk bulan atau catatan kalender dan meminta pengguna mengecek kanal resmi.
-- Asumsi biaya (makan Rp60.000/hari/dewasa, transportasi lokal Rp60.000/hari, tarif kamar per kelas, tiket anak 50%) ada di `src/lib/culture.ts` (`COST`, `lodgingInfo`). Itu estimasi.
-- Sebelum dipakai di luar demo: verifikasi ke pengelola, lalu ubah status menjadi `VERIFIED` lewat `/admin` (akun ADMIN) atau Prisma Studio. Seed ulang hanya menimpa objek yang masih `SEED`; objek `VERIFIED` tidak pernah ditimpa.
-
 ## Mengganti gambar placeholder
 
 - `public/images/logo/logo.png` — logo asli; `logo-trim.png` (potongan untuk navbar, login, footer, dasbor) dan `src/app/icon.png` (favicon) dibuat darinya
