@@ -18,7 +18,9 @@ RUN npx prisma generate && npm run build
 
 # ---- one-shot job: create tables + seed (used by docker-compose) ----
 FROM base AS migrator
-COPY --from=builder /app ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+COPY prisma ./prisma
 CMD ["sh", "-c", "npx prisma db push --skip-generate && npx prisma db seed"]
 
 # ---- production runtime ----
