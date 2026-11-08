@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { readBody } from "@/lib/api";
-import { err, TOO_MANY } from "@/lib/auth-api";
+import { readBody, fail, TOO_MANY } from "@/lib/api";
 import { sendVerificationEmail } from "@/lib/auth-mail";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
@@ -9,14 +8,14 @@ import { emailOnlySchema } from "@/lib/validators";
 
 /** Kirim ulang email verifikasi. Selalu menjawab sukses agar tidak membocorkan email mana yang terdaftar. */
 export async function POST(req: Request) {
-  if (!rateLimit(`resend-ip:${clientKey(req)}`, 10, 60 * 60_000)) return err(TOO_MANY, 429);
+  if (!rateLimit(`resend-ip:${clientKey(req)}`, 10, 60 * 60_000)) return fail(TOO_MANY, 429);
 
   const body = await readBody(req);
-  if (body === null) return err("Body tidak valid");
+  if (body === null) return fail("Body tidak valid");
   const parsed = emailOnlySchema.safeParse(body);
-  if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
-  if (!rateLimit(`resend-email:${parsed.data.email}`, 3, 60 * 60_000)) return err(TOO_MANY, 429);
+  if (!rateLimit(`resend-email:${parsed.data.email}`, 3, 60 * 60_000)) return fail(TOO_MANY, 429);
 
   try {
     const user = await prisma.user.findUnique({
