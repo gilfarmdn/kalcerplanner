@@ -38,7 +38,7 @@ npm run check:planner       # uji mesin rekomendasi (tanpa database)
 | `/rencana` | Form lengkap → **3 gaya rencana** (Seimbang, Mendalam & Berdampak, Hemat Cerdas) dengan alasan tiap tempat, rincian biaya, dampak lokal, saran oleh-oleh dari sisa anggaran. Terbuka tanpa login; **menyimpan ke My Trip wajib login** |
 | `/trip`, `/trip/[id]` | **Wisatawan** — My Trip: daftar dan detail rencana tersimpan; klaim stempel setelah hari keberangkatan |
 | `/jejak` | **Paspor Budaya**: stempel, catatan "yang kupelajari", lencana per tema, dampak teralokasi |
-| `/profil` | Nama dan minat favorit (mengisi form Rencana) |
+| `/profil` | Nama dan foto profil |
 | `/jelajah`, `/jelajah/[slug]` | Objek budaya dari database: makna ("Mengapa ini penting"), etika berkunjung, info praktis, event terkait |
 | `/kalender` | Event tahunan/periodik + pertunjukan rutin |
 | `/destinasi` (`/tambah`, `/[id]`, `/kunjungan`, `/profil`) | **Pelaku budaya** — My Destination: mengajukan dan mengelola tempat/kegiatan, riwayat kunjungan |
@@ -47,6 +47,15 @@ npm run check:planner       # uji mesin rekomendasi (tanpa database)
 | `/umkm` | Galeri UMKM dengan cerita di balik tiap oleh-oleh |
 | `/bantuan` | Ulasan (menunggu moderasi) + FAQ |
 | `/masuk`, `/daftar` | Login / daftar (wisatawan atau pelaku budaya). Setelah login selalu ke halaman utama akun: wisatawan `/trip`, pelaku budaya `/destinasi`, kurator `/admin` (kecuali wisatawan yang masuk dari "Simpan Rencana") |
+
+## Keamanan
+
+- **Password**: bcrypt cost 12 (`src/lib/password.ts`). Hash lama dengan cost lebih rendah diperbarui otomatis saat pengguna berhasil masuk. Login tetap menjalankan bcrypt untuk email tak dikenal agar lama respons tidak membocorkan email yang terdaftar.
+- **Header keamanan** (`next.config.mjs`): Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy.
+- **Cloudflare Turnstile** pada form daftar dan lupa password (`TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`). Bila kosong, pemeriksaan dilewati (hanya untuk pengembangan lokal).
+- **Batas permintaan** per IP dan per email/akun untuk login, daftar, lupa password, newsletter, ulasan, dan pendaftaran kunjungan (`src/lib/rate-limit.ts`, di memori proses). IP diambil dari entri terakhir `X-Forwarded-For` yang ditambahkan proxy.
+- **Gmail**: alamat `@gmail.com` harus mengikuti aturan nama pengguna Gmail; akun baru aktif setelah tautan verifikasi diklik. Lupa password hanya mengirim tautan ke email yang terdaftar.
+- **Cookie sesi**: httpOnly, SameSite=Lax; set `COOKIE_SECURE=true` bila situs disajikan lewat HTTPS.
 
 ### Yang sengaja dihapus dari desain Figma awal
 Pembayaran/"Bayar" dan "Pesan Sekarang", pilihan maskapai & bintang hotel sebagai inti hasil, "Riwayat Transaksi" (diganti **Jejak Budaya**), dan strip "Mitra Perjalanan" generik. KalcerPlanner tidak memproses pembayaran; pengguna memesan langsung ke pengelola.
