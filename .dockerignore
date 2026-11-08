@@ -9,3 +9,10 @@ docker-compose.yml
 README.md
 *.tsbuildinfo
 npm-debug.log
+.env.*
+!.env.example
+backups
+*.dump
+*.sql
+.vscode
+scripts
