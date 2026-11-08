@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
+import { fail, firstIssue, readBody, TOO_MANY } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { newsletterSchema } from "@/lib/validators";
 
+/** Berlangganan newsletter (form di footer, tanpa login). Dibatasi per IP agar tabel tidak dibanjiri. */
 export async function POST(req: Request) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Body tidak valid" }, { status: 400 });
-  }
+  if (!rateLimit(`newsletter:${clientKey(req)}`, 5, 60 * 60_000)) return fail(TOO_MANY, 429);
 
+  const body = await readBody(req);
+  if (body === null) return fail("Body tidak valid");
   const parsed = newsletterSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Email tidak valid" }, { status: 400 });
-  }
+  if (!parsed.success) return fail(firstIssue(parsed.error));
 
   try {
     await prisma.newsletterSubscriber.upsert({
@@ -24,6 +22,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     console.error("[newsletter] upsert failed", error);
-    return NextResponse.json({ error: "Gagal berlangganan" }, { status: 500 });
+    return fail("Gagal berlangganan", 500);
   }
 }
