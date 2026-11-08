@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
+import Turnstile, { type TurnstileHandle } from "@/components/Turnstile";
 import { buttonClass, cardClass, inputClass } from "@/components/auth-styles";
 
-export default function ForgotPasswordForm() {
+export default function ForgotPasswordForm({ turnstileSiteKey }: { turnstileSiteKey: string | null }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const turnstile = useRef<TurnstileHandle>(null);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -20,7 +23,7 @@ export default function ForgotPasswordForm() {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, turnstileToken: captcha }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -31,6 +34,7 @@ export default function ForgotPasswordForm() {
       setError("Tidak dapat terhubung ke server.");
     } finally {
       setLoading(false);
+      turnstile.current?.reset();
     }
   }
 
@@ -57,6 +61,7 @@ export default function ForgotPasswordForm() {
           Email
           <input required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="gabriel@example.com" className={inputClass} />
         </label>
+        {turnstileSiteKey && <Turnstile ref={turnstile} siteKey={turnstileSiteKey} onToken={setCaptcha} />}
         {error && (
           <p role="alert" className="text-sm text-red-600">
             {error}
@@ -68,7 +73,7 @@ export default function ForgotPasswordForm() {
             )}
           </p>
         )}
-        <button type="submit" disabled={loading} className={buttonClass}>
+        <button type="submit" disabled={loading || (!!turnstileSiteKey && !captcha)} className={buttonClass}>
           {loading ? "Memproses..." : "Kirim tautan reset"}
         </button>
         <Link href="/masuk" className="text-base text-brand-link underline">Kembali ke halaman masuk</Link>
