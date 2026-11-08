@@ -2,7 +2,7 @@ import { z } from "zod";
 import { DEPTHS, INTERESTS, LODGINGS, OBJECT_KINDS, PACES, SLOTS, STYLES, TRANSPORTS, ZONES } from "@/lib/culture";
 
 /** Wilayah diketik bebas; dirapikan agar "bantul " dan "BANTUL" tidak menjadi dua wilayah berbeda. */
-export function normalizeZone(raw: string): string {
+function normalizeZone(raw: string): string {
   const clean = raw.trim().replace(/\s+/g, " ");
   const known = ZONES.find((z) => z.toLowerCase() === clean.toLowerCase());
   if (known) return known;
@@ -152,7 +152,7 @@ const GMAIL_TYPOS = ["gmial.com", "gmai.com", "gmal.com", "gmil.com", "gmaill.co
  * tidak diawali/diakhiri titik, dan tidak ada dua titik berurutan. Bagian setelah "+" adalah alias dan diabaikan.
  * Ada tidaknya akun dipastikan lewat tautan verifikasi yang dikirim ke alamat itu.
  */
-export function gmailProblem(email: string): string | null {
+function gmailProblem(email: string): string | null {
   const at = email.lastIndexOf("@");
   if (at < 0) return null;
   const domain = email.slice(at + 1);
