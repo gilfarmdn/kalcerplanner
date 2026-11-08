@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import type { Interest } from "@/lib/culture";
 import { roleHome } from "@/lib/role-home";
 import { COOKIE_NAME, sessionCookieOptions, signSession, verifySession } from "@/lib/session-token";
 
@@ -21,17 +20,16 @@ export type CurrentUser = {
   name: string;
   email: string;
   role: "TRAVELER" | "PRACTITIONER" | "ADMIN";
-  interests: Interest[];
   avatarUrl: string | null;
 };
 
-/** Session user re-read from the database (fresh role/preferences). Null if signed out or the account is gone. */
+/** Session user re-read from the database (fresh role/profile). Null if signed out or the account is gone. */
 export async function getUser(): Promise<CurrentUser | null> {
   const session = await getSession();
   if (!session) return null;
   const user = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { id: true, name: true, email: true, role: true, interests: true, avatarUrl: true, deactivatedAt: true },
+    select: { id: true, name: true, email: true, role: true, avatarUrl: true, deactivatedAt: true },
   });
   // Akun yang dinonaktifkan kurator diperlakukan seperti sudah keluar.
   if (!user || user.deactivatedAt) return null;
