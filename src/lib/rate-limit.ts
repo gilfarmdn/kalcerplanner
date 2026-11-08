@@ -18,7 +18,10 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
   return entry.count <= max;
 }
 
-/** Alamat klien dari header proxy (apa adanya; bukan jaminan identitas). */
+/**
+ * Alamat klien untuk batas per-IP. Diambil dari entri TERAKHIR X-Forwarded-For, yaitu yang ditambahkan
+ * proxy tepercaya (Tailscale Funnel); entri di depannya bisa diisi bebas oleh klien untuk mengakali batas.
+ */
 export function clientKey(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return req.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
 }
