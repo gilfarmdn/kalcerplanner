@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { err, firstIssueId, guardPelaku, ownedObjectWhere, readJson, toDay } from "@/lib/pelaku-api";
+import { fail, firstIssue, readBody } from "@/lib/api";
+import { guardPelaku, ownedObjectWhere } from "@/lib/pelaku-api";
+import { toDay } from "@/lib/tanggal";
 import { visitUpdateSchema } from "@/lib/pelaku-validators";
 import { noticeVisits, upcomingVisits } from "@/lib/kuota";
 
@@ -13,17 +15,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!g.ok) return g.error;
 
   const existing = await findVisit(g.user, params.id);
-  if (!existing) return err("Data kunjungan tidak ditemukan", 404);
+  if (!existing) return fail("Data kunjungan tidak ditemukan", 404);
 
-  const body = await readJson(req);
-  if (body === null) return err("Body tidak valid");
+  const body = await readBody(req);
+  if (body === null) return fail("Body tidak valid");
   const parsed = visitUpdateSchema.safeParse(body);
-  if (!parsed.success) return err(firstIssueId(parsed.error));
+  if (!parsed.success) return fail(firstIssue(parsed.error));
   const d = parsed.data;
 
   if (d.eventId) {
     const event = await prisma.culturalEvent.findFirst({ where: { id: d.eventId, objectId: existing.objectId }, select: { id: true } });
-    if (!event) return err("Event tidak sesuai dengan destinasi", 400);
+    if (!event) return fail("Event tidak sesuai dengan destinasi", 400);
   }
 
   try {
@@ -46,10 +48,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ ok: true });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return err("Pengunjung ini sudah terdaftar pada tanggal tersebut", 409);
+      return fail("Pengunjung ini sudah terdaftar pada tanggal tersebut", 409);
     }
     console.error("[pelaku/visits] update failed", error);
-    return err("Gagal memperbarui kunjungan", 500);
+    return fail("Gagal memperbarui kunjungan", 500);
   }
 }
 
@@ -58,13 +60,13 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   if (!g.ok) return g.error;
 
   const existing = await findVisit(g.user, params.id);
-  if (!existing) return err("Data kunjungan tidak ditemukan", 404);
+  if (!existing) return fail("Data kunjungan tidak ditemukan", 404);
 
   try {
     await prisma.visit.delete({ where: { id: existing.id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[pelaku/visits] delete failed", error);
-    return err("Gagal menghapus kunjungan", 500);
+    return fail("Gagal menghapus kunjungan", 500);
   }
 }
