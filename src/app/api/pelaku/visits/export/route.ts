@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { err, guardPelaku, dayString } from "@/lib/pelaku-api";
+import { fail } from "@/lib/api";
+import { guardPelaku } from "@/lib/pelaku-api";
+import { dayString } from "@/lib/tanggal";
 import { visitStatusLabel } from "@/lib/pelaku-validators";
 import { visitWhere } from "@/lib/pelaku-visits";
 
@@ -57,6 +59,6 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("[pelaku/visits] export failed", error);
-    return err("Gagal membuat ekspor", 500);
+    return fail("Gagal membuat ekspor", 500);
   }
 }
