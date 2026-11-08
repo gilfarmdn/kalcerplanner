@@ -1,30 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { NextResponse } from "next/server";
-import type { ZodError } from "zod";
-import { getUser, type CurrentUser } from "@/lib/auth";
+import { guard } from "@/lib/api";
+import type { CurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-/** Respons galat untuk API dasbor pelaku (bahasa Indonesia). */
-export const err = (error: string, status = 400) => NextResponse.json({ error }, { status });
-export const firstIssueId = (e: ZodError) => e.issues[0]?.message ?? "Input tidak valid";
-
-export async function readJson(req: Request): Promise<unknown | null> {
-  try {
-    return await req.json();
-  } catch {
-    return null;
-  }
-}
-
-type Guard = { ok: true; user: CurrentUser } | { ok: false; error: NextResponse };
+import { toDay } from "@/lib/tanggal";
 
 /** Hanya pelaku budaya. Kurator tidak menambah / mengubah data wisata, hanya memverifikasinya. */
-export async function guardPelaku(): Promise<Guard> {
-  const user = await getUser();
-  if (!user) return { ok: false, error: err("Silakan masuk terlebih dahulu", 401) };
-  if (user.role !== "PRACTITIONER") return { ok: false, error: err("Akses hanya untuk pelaku budaya", 403) };
-  return { ok: true, user };
-}
+export const guardPelaku = () => guard(["PRACTITIONER"]);
 
 /** Where-clause yang membatasi data pada milik pelaku itu sendiri. */
 export const ownedObjectWhere = (user: CurrentUser) => ({ ownerId: user.id });
@@ -62,7 +43,3 @@ export const slugify = (s: string) =>
     .slice(0, 60) || "item";
 
 export const uniqueSlug = (name: string) => `${slugify(name)}-${randomBytes(2).toString("hex")}`;
-
-/** 'YYYY-MM-DD' -> Date UTC tengah malam. */
-export const toDay = (s: string) => new Date(`${s}T00:00:00.000Z`);
-export const dayString = (d: Date) => d.toISOString().slice(0, 10);
