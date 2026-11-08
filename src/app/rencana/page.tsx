@@ -37,15 +37,13 @@ export default async function RencanaPage({ searchParams }: { searchParams: SP }
   const zones = zoneRows.map((r) => r.zone);
 
   // Values can come from the homepage "RENCANA" box (via ?query) — sanitise before use.
-  // When nothing is given, the signed-in user's saved interests are the default.
-  const fromQuery = interestList(searchParams.minat);
   const initial: RencanaInitial = {
     startDate: date(searchParams.pergi),
     endDate: date(searchParams.pulang),
     adults: int(searchParams.dewasa, 1, 20, 1),
     children: int(searchParams.anak, 0, 20, 0),
     budget: first(searchParams.anggaran).replace(/\D/g, "").slice(0, 10),
-    interests: fromQuery.length ? fromQuery : (user?.interests ?? []),
+    interests: interestList(searchParams.minat),
     zone: zones.includes(first(searchParams.wilayah)) ? first(searchParams.wilayah) : zones.length === 1 ? zones[0] : "",
   };
 
