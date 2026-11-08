@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import type { CurrentUser } from "@/lib/auth";
-import { ownedObjectWhere, toDay } from "@/lib/pelaku-api";
+import { ownedObjectWhere } from "@/lib/pelaku-api";
+import { toDay } from "@/lib/tanggal";
 
 export type VisitFilter = { from?: string; to?: string; objectId?: string; status?: string; q?: string };
 
