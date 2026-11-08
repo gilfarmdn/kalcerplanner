@@ -30,7 +30,7 @@ export type CalShow = {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** month = 0..11 */
-export const toYmd = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
+const toYmd = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
 
 export const weekdayOf = (ymd: string) => new Date(`${ymd}T00:00:00Z`).getUTCDay();
 
