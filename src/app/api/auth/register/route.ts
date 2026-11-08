@@ -1,30 +1,33 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
-import { readBody } from "@/lib/api";
-import { err, TOO_MANY } from "@/lib/auth-api";
+import { readBody, fail, TOO_MANY } from "@/lib/api";
 import { sendVerificationEmail } from "@/lib/auth-mail";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
+import { TURNSTILE_FAILED, verifyTurnstile } from "@/lib/turnstile";
 import { registerSchema } from "@/lib/validators";
 
 /** Mendaftar: akun dibuat BELUM terverifikasi dan belum masuk; tautan verifikasi dikirim lewat email. */
 export async function POST(req: Request) {
-  if (!rateLimit(`register:${clientKey(req)}`, 10, 60 * 60_000)) return err(TOO_MANY, 429);
+  if (!rateLimit(`register:${clientKey(req)}`, 10, 60 * 60_000)) return fail(TOO_MANY, 429);
 
   const body = await readBody(req);
-  if (body === null) return err("Body tidak valid");
+  if (body === null) return fail("Body tidak valid");
+  if (!(await verifyTurnstile((body as { turnstileToken?: unknown }).turnstileToken, clientKey(req)))) {
+    return fail(TURNSTILE_FAILED, 400, "TURNSTILE_FAILED");
+  }
   const parsed = registerSchema.safeParse(body);
-  if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
   try {
     const existing = await prisma.user.findUnique({
       where: { email: parsed.data.email },
       select: { id: true, emailVerifiedAt: true },
     });
-    if (existing?.emailVerifiedAt) return err("Email sudah terdaftar. Silakan masuk.", 409);
+    if (existing?.emailVerifiedAt) return fail("Email sudah terdaftar. Silakan masuk.", 409);
 
-    const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const passwordHash = await hashPassword(parsed.data.password);
     const data = { name: parsed.data.name, passwordHash, role: parsed.data.role };
     // Akun yang belum pernah diverifikasi belum terbukti milik siapa pun (bisa salah ketik atau alamat palsu),
     // jadi pendaftaran ulang menimpanya dan mengirim tautan verifikasi baru, bukan mengunci alamat itu.
@@ -45,6 +48,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, needsVerification: true, emailSent }, { status: 201 });
   } catch (error) {
     console.error("[auth/register] failed", error);
-    return err("Terjadi kesalahan. Coba lagi.", 500);
+    return fail("Terjadi kesalahan. Coba lagi.", 500);
   }
 }
