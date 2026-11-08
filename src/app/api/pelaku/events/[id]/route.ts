@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { err, findManageableObject, firstIssueId, guardPelaku, ownedObjectWhere, readJson } from "@/lib/pelaku-api";
+import { fail, firstIssue, readBody } from "@/lib/api";
+import { findManageableObject, guardPelaku, ownedObjectWhere, eventScheduleData } from "@/lib/pelaku-api";
 import { eventSchema } from "@/lib/pelaku-validators";
-import { eventScheduleData } from "@/lib/pelaku-api";
 import { eventOccursOn } from "@/lib/kalender";
 import { noticeVisits, toSchedule, upcomingVisits } from "@/lib/kuota";
-import { dayString } from "@/lib/pelaku-api";
-import { formatHariPanjang } from "@/lib/tanggal";
+import { dayString, formatHariPanjang } from "@/lib/tanggal";
 
 /** Event hanya boleh diubah bila destinasi terkait milik user (atau user adalah kurator). */
 const findEvent = (user: Parameters<typeof ownedObjectWhere>[0], id: string) =>
@@ -17,16 +16,16 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (!g.ok) return g.error;
 
   const existing = await findEvent(g.user, params.id);
-  if (!existing) return err("Event tidak ditemukan", 404);
+  if (!existing) return fail("Event tidak ditemukan", 404);
 
-  const body = await readJson(req);
-  if (body === null) return err("Body tidak valid");
+  const body = await readBody(req);
+  if (body === null) return fail("Body tidak valid");
   const parsed = eventSchema.safeParse(body);
-  if (!parsed.success) return err(firstIssueId(parsed.error));
+  if (!parsed.success) return fail(firstIssue(parsed.error));
   const d = parsed.data;
 
   const object = await findManageableObject(g.user, d.objectId);
-  if (!object) return err("Destinasi tidak ditemukan", 404);
+  if (!object) return fail("Destinasi tidak ditemukan", 404);
 
   try {
     const updated = await prisma.culturalEvent.update({
@@ -61,7 +60,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[pelaku/events] update failed", error);
-    return err("Gagal menyimpan event", 500);
+    return fail("Gagal menyimpan event", 500);
   }
 }
 
@@ -70,7 +69,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   if (!g.ok) return g.error;
 
   const existing = await findEvent(g.user, params.id);
-  if (!existing) return err("Event tidak ditemukan", 404);
+  if (!existing) return fail("Event tidak ditemukan", 404);
 
   try {
     const visits = await upcomingVisits({ eventId: existing.id });
@@ -80,6 +79,6 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[pelaku/events] delete failed", error);
-    return err("Gagal menghapus event", 500);
+    return fail("Gagal menghapus event", 500);
   }
 }
