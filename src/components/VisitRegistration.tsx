@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { formatHariPanjang } from "@/lib/tanggal";
 
 /** Dikirim setelah daftar / batal agar semua kartu kuota di halaman memuat ulang sisanya. */
-export const KUOTA_CHANGED = "kuota:changed";
+const KUOTA_CHANGED = "kuota:changed";
 
 type KuotaInfo = {
   quota: number | null;
@@ -21,12 +21,12 @@ type KuotaInfo = {
   } | null;
 };
 
-export async function fetchKuota(objectId: string, date: string): Promise<KuotaInfo | null> {
+async function fetchKuota(objectId: string, date: string): Promise<KuotaInfo | null> {
   const res = await fetch(`/api/visits/kuota?objectId=${encodeURIComponent(objectId)}&date=${date}`, { cache: "no-store" });
   return res.ok ? res.json() : null;
 }
 
-export async function postVisit(objectId: string, date: string, partySize: number): Promise<string | null> {
+async function postVisit(objectId: string, date: string, partySize: number): Promise<string | null> {
   try {
     const res = await fetch("/api/visits", {
       method: "POST",
