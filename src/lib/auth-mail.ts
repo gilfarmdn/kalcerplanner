@@ -7,7 +7,7 @@ import { sendMail } from "@/lib/mailer";
  * Alamat dasar untuk tautan di email. Di production APP_URL WAJIB diisi: memakai alamat dari permintaan
  * berisiko, karena header Host bisa dipalsukan penyerang agar tautan reset mengarah ke situs lain.
  */
-export function appUrl(req: Request): string {
+function appUrl(req: Request): string {
   const configured = process.env.APP_URL?.trim();
   if (configured) return configured.replace(/\/+$/, "");
   if (process.env.NODE_ENV === "production") throw new Error("APP_URL belum diisi (wajib di production)");
