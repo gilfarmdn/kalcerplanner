@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
+import Turnstile, { type TurnstileHandle } from "@/components/Turnstile";
 import { buttonClass, cardClass, inputClass } from "@/components/auth-styles";
 
 type Props = {
   mode: "login" | "register";
   /** Dibawa lewat ?next=. Setelah login hanya dipakai untuk "Simpan Rencana"; selain itu ke halaman utama akun. */
   next: string;
+  /** Site key Cloudflare Turnstile untuk form daftar; null = tidak dipakai. */
+  turnstileSiteKey?: string | null;
 };
 
-export default function AuthForm({ mode, next }: Props) {
+export default function AuthForm({ mode, next, turnstileSiteKey = null }: Props) {
   const isLogin = mode === "login";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,6 +24,9 @@ export default function AuthForm({ mode, next }: Props) {
   const [needsVerify, setNeedsVerify] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const turnstile = useRef<TurnstileHandle>(null);
+  const needsCaptcha = !isLogin && !!turnstileSiteKey;
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,7 +38,7 @@ export default function AuthForm({ mode, next }: Props) {
       const res = await fetch(isLogin ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isLogin ? { email, password, next } : { name, email, password, role, next }),
+        body: JSON.stringify(isLogin ? { email, password, next } : { name, email, password, role, next, turnstileToken: captcha }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -53,6 +59,8 @@ export default function AuthForm({ mode, next }: Props) {
       setError("Tidak dapat terhubung ke server.");
     } finally {
       setLoading(false);
+      // Token Turnstile hanya berlaku sekali.
+      turnstile.current?.reset();
     }
   }
 
@@ -144,10 +152,12 @@ export default function AuthForm({ mode, next }: Props) {
           />
         </label>
 
+        {needsCaptcha && <Turnstile ref={turnstile} siteKey={turnstileSiteKey} onToken={setCaptcha} />}
+
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {notice && <p className="text-sm text-neutral-600">{notice}</p>}
 
-        <button type="submit" disabled={loading} className={buttonClass}>
+        <button type="submit" disabled={loading || (needsCaptcha && !captcha)} className={buttonClass}>
           {loading ? "Memproses..." : isLogin ? "Masuk" : "Daftar"}
         </button>
 
