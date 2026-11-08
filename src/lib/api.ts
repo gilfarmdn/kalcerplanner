@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getUser, type CurrentUser } from "@/lib/auth";
 
-export const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
+/** Respons galat JSON (bahasa Indonesia), dengan kode opsional yang bisa dibaca klien. */
+export const fail = (error: string, status = 400, code?: string) =>
+  NextResponse.json({ error, ...(code ? { code } : {}) }, { status });
+
+export const TOO_MANY = "Terlalu banyak percobaan. Coba lagi beberapa menit lagi.";
 
 export async function readBody(req: Request): Promise<unknown | null> {
   try {
