@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { err, findManageableObject, firstIssueId, guardPelaku, readJson } from "@/lib/pelaku-api";
+import { fail, firstIssue, readBody } from "@/lib/api";
+import { findManageableObject, guardPelaku } from "@/lib/pelaku-api";
 import { objectProposalSchema } from "@/lib/validators";
 import { weekdayOf } from "@/lib/kalender";
 import { noticeVisits, upcomingVisits } from "@/lib/kuota";
-import { dayString } from "@/lib/pelaku-api";
-import { formatHariPanjang } from "@/lib/tanggal";
+import { dayString, formatHariPanjang } from "@/lib/tanggal";
 
 /**
  * Ubah destinasi milik sendiri. Perubahan mengembalikan status ke PENDING (dicek ulang kurator).
@@ -15,12 +15,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (!g.ok) return g.error;
 
   const existing = await findManageableObject(g.user, params.id);
-  if (!existing) return err("Destinasi tidak ditemukan", 404);
+  if (!existing) return fail("Destinasi tidak ditemukan", 404);
 
-  const body = await readJson(req);
-  if (body === null) return err("Body tidak valid");
+  const body = await readBody(req);
+  if (body === null) return fail("Body tidak valid");
   const parsed = objectProposalSchema.safeParse(body);
-  if (!parsed.success) return err(firstIssueId(parsed.error));
+  if (!parsed.success) return fail(firstIssue(parsed.error));
   const d = parsed.data;
 
   const before = await prisma.culturalObject.findUnique({
@@ -75,7 +75,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ ok: true, needsReview: true });
   } catch (error) {
     console.error("[pelaku/destinasi] update failed", error);
-    return err("Gagal menyimpan perubahan", 500);
+    return fail("Gagal menyimpan perubahan", 500);
   }
 }
 
@@ -85,7 +85,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   if (!g.ok) return g.error;
 
   const existing = await findManageableObject(g.user, params.id);
-  if (!existing) return err("Destinasi tidak ditemukan", 404);
+  if (!existing) return fail("Destinasi tidak ditemukan", 404);
 
   try {
     const [inTrips, stamps] = await Promise.all([
@@ -93,12 +93,12 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
       prisma.stamp.count({ where: { objectId: existing.id } }),
     ]);
     if (inTrips + stamps > 0) {
-      return err("Destinasi ini sudah dipakai di rencana atau paspor pengunjung, jadi tidak bisa dihapus. Hubungi kurator bila perlu.", 409);
+      return fail("Destinasi ini sudah dipakai di rencana atau paspor pengunjung, jadi tidak bisa dihapus. Hubungi kurator bila perlu.", 409);
     }
     await prisma.culturalObject.delete({ where: { id: existing.id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[pelaku/destinasi] delete failed", error);
-    return err("Gagal menghapus destinasi", 500);
+    return fail("Gagal menghapus destinasi", 500);
   }
 }
