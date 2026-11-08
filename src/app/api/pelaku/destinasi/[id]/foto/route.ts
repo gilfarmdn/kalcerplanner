@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { MAX_IMAGE_BYTES, sniffImage } from "@/lib/image-validate";
-import { err, findManageableObject, guardPelaku } from "@/lib/pelaku-api";
+import { MAX_IMAGE_BYTES, sniffImageType } from "@/lib/images";
+import { fail } from "@/lib/api";
+import { findManageableObject, guardPelaku } from "@/lib/pelaku-api";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 const IMAGE_URL_PREFIX = "/api/images/";
@@ -10,28 +11,28 @@ const IMAGE_URL_PREFIX = "/api/images/";
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const g = await guardPelaku();
   if (!g.ok) return g.error;
-  if (!rateLimit(`foto:${g.user.id}:${clientKey(req)}`, 30, 60 * 60_000)) return err("Terlalu banyak unggahan. Coba lagi nanti.", 429);
+  if (!rateLimit(`foto:${g.user.id}:${clientKey(req)}`, 30, 60 * 60_000)) return fail("Terlalu banyak unggahan. Coba lagi nanti.", 429);
 
   const object = await findManageableObject(g.user, params.id);
-  if (!object) return err("Destinasi tidak ditemukan", 404);
+  if (!object) return fail("Destinasi tidak ditemukan", 404);
 
   // Tolak lebih awal bila badan permintaan jelas terlalu besar (sebelum dibaca ke memori).
   const declared = Number(req.headers.get("content-length") ?? 0);
-  if (declared > MAX_IMAGE_BYTES + 64 * 1024) return err("Foto terlalu besar (maksimal 2 MB)", 413);
+  if (declared > MAX_IMAGE_BYTES + 64 * 1024) return fail("Foto terlalu besar (maksimal 2 MB)", 413);
 
   let file: FormDataEntryValue | null;
   try {
     file = (await req.formData()).get("file");
   } catch {
-    return err("Berkas tidak valid");
+    return fail("Berkas tidak valid");
   }
-  if (!file || typeof file === "string") return err("Pilih foto terlebih dahulu");
-  if (file.size === 0) return err("Berkas kosong");
-  if (file.size > MAX_IMAGE_BYTES) return err("Foto terlalu besar (maksimal 2 MB)", 413);
+  if (!file || typeof file === "string") return fail("Pilih foto terlebih dahulu");
+  if (file.size === 0) return fail("Berkas kosong");
+  if (file.size > MAX_IMAGE_BYTES) return fail("Foto terlalu besar (maksimal 2 MB)", 413);
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const mime = sniffImage(bytes);
-  if (!mime) return err("Format foto harus JPG, PNG, atau WebP");
+  const mime = sniffImageType(bytes);
+  if (!mime) return fail("Format foto harus JPG, PNG, atau WebP");
 
   try {
     const url = await prisma.$transaction(async (tx) => {
@@ -47,7 +48,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ ok: true, imageUrl: url }, { status: 201 });
   } catch (error) {
     console.error("[pelaku/foto] upload failed", error);
-    return err("Gagal menyimpan foto", 500);
+    return fail("Gagal menyimpan foto", 500);
   }
 }
 
@@ -57,7 +58,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   if (!g.ok) return g.error;
 
   const object = await findManageableObject(g.user, params.id);
-  if (!object) return err("Destinasi tidak ditemukan", 404);
+  if (!object) return fail("Destinasi tidak ditemukan", 404);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -69,6 +70,6 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[pelaku/foto] delete failed", error);
-    return err("Gagal menghapus foto", 500);
+    return fail("Gagal menghapus foto", 500);
   }
 }
