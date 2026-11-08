@@ -47,15 +47,15 @@ enum ObjectKind {
   RUTE
 }
 
-enum VisitStatus { 
-  BOOKED 
-  ATTENDED 
-  CANCELLED 
+enum VisitStatus {
+  BOOKED
+  ATTENDED
+  CANCELLED
 }
 
-enum VisitSource { 
-  ONLINE 
-  WALKIN 
+enum VisitSource {
+  ONLINE
+  WALKIN
 }
 
 // Kedalaman pengalaman: menikmati -> belajar -> terlibat langsung.
@@ -70,13 +70,6 @@ enum Slot {
   SIANG
   SORE
   MALAM
-}
-
-enum Lodging {
-  NONE
-  HEMAT
-  STANDAR
-  NYAMAN
 }
 
 // SEED = data awal yang disusun tim (tampil publik tanpa label status).
@@ -95,25 +88,23 @@ enum ObjectStatus {
 // ------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(TRAVELER)
-  /// Preferensi default, mengisi form Rencana otomatis.
-  interests    Interest[] @default([])
-  createdAt    DateTime @default(now())
+  id              String           @id @default(cuid())
+  name            String
+  email           String           @unique
+  passwordHash    String
+  role            Role             @default(TRAVELER)
+  createdAt       DateTime         @default(now())
   emailVerifiedAt DateTime?
   /// Diisi kurator saat menonaktifkan akun: tidak bisa masuk, dan baru boleh dihapus setelah nonaktif.
-  deactivatedAt DateTime?
+  deactivatedAt   DateTime?
   /// Foto profil: "/api/images/<id>" (ImageAsset milik user ini). Kosong = avatar bawaan.
-  avatarUrl    String?
-  trips   Trip[]
-  stamps  Stamp[]
-  objects CulturalObject[]
-  tokens  AuthToken[]
-  images  ImageAsset[]
-  visits  Visit[]  
+  avatarUrl       String?
+  trips           Trip[]
+  stamps          Stamp[]
+  objects         CulturalObject[]
+  tokens          AuthToken[]
+  images          ImageAsset[]
+  visits          Visit[]
 }
 
 model AuthToken {
@@ -179,7 +170,7 @@ model CulturalObject {
 
   events CulturalEvent[]
   visits Visit[]
-  image  ObjectImage? 
+  image  ObjectImage?
   items  TripItem[]
   stamps Stamp[]
 
@@ -190,26 +181,26 @@ model CulturalObject {
 // Event periodik / tahunan untuk Kalender Budaya.
 // Tanggal pasti hanya diisi bila sudah diketahui (startsOn/endsOn); selain itu pakai monthHint + dateNote.
 model CulturalEvent {
-  id          String          @id @default(cuid())
-  slug        String          @unique
-  title       String
-  description String          @db.Text
-  interest    Interest?
-  zone        String?
-  objectId    String?
-  object      CulturalObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
-  monthHint   Int? // 1..12, "biasanya"
-  dateNote    String // mis. "Mengikuti kalender Jawa/Hijriah"
-  startsOn    DateTime?
-  endsOn      DateTime?
-  repeatsYearly Boolean       @default(false)
-  weekdays    Int[]           @default([])
-  exceptDates String[]        @default([])
-  venue       String?
-  imageUrl    String? // "/api/images/<id>" bila diunggah pelaku
-  isActive    Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  visits      Visit[] 
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  title         String
+  description   String          @db.Text
+  interest      Interest?
+  zone          String?
+  objectId      String?
+  object        CulturalObject? @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  monthHint     Int? // 1..12, "biasanya"
+  dateNote      String // mis. "Mengikuti kalender Jawa/Hijriah"
+  startsOn      DateTime?
+  endsOn        DateTime?
+  repeatsYearly Boolean         @default(false)
+  weekdays      Int[]           @default([])
+  exceptDates   String[]        @default([])
+  venue         String?
+  imageUrl      String? // "/api/images/<id>" bila diunggah pelaku
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  visits        Visit[]
 }
 
 // Foto yang diunggah pelaku (destinasi / event). Disimpan langsung di database dan
@@ -231,34 +222,27 @@ model ImageAsset {
 // ------------------------------------------------------------------
 
 model Trip {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title          String
-  style          String // SEIMBANG | MENDALAM | HEMAT
-  startDate      DateTime
-  endDate        DateTime
-  adults         Int      @default(1)
-  children       Int      @default(0)
-  budget         Int?
-  originCostIdr  Int      @default(0)
-  lodging        Lodging  @default(STANDAR)
-  rooms          Int      @default(1)
-  includeSouvenir Boolean @default(false)
-  localTransport Boolean  @default(false)
-  interests      Interest[] @default([])
-  depth          Depth    @default(BELAJAR)
-  spreadTourism  Boolean  @default(false)
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  style           String // SEIMBANG | MENDALAM | HEMAT
+  startDate       DateTime
+  endDate         DateTime
+  adults          Int      @default(1)
+  children        Int      @default(0)
+  budget          Int?
+  includeSouvenir Boolean  @default(false)
 
-  costTickets    Int      @default(0)
-  costMeals      Int      @default(0)
-  costLocal      Int      @default(0)
-  costLodging    Int      @default(0)
-  totalIdr       Int      @default(0)
+  costTickets Int      @default(0)
+  costMeals   Int      @default(0)
+  costLocal   Int      @default(0)
+  costLodging Int      @default(0)
+  totalIdr    Int      @default(0)
   // Rp tiket/kelas yang mengalir ke pengelola & pelaku budaya setempat.
-  impactIdr      Int      @default(0)
-  notes          String[] @default([])
-  createdAt      DateTime @default(now())
+  impactIdr   Int      @default(0)
+  notes       String[] @default([])
+  createdAt   DateTime @default(now())
 
   items  TripItem[]
   stamps Stamp[]
@@ -304,23 +288,10 @@ model Stamp {
 // Konten landing page                                               
 // ------------------------------------------------------------------
 
-// "Highlight Jelajah" cards on the landing page.
-model Highlight {
-  id        String   @id @default(cuid())
-  title     String
-  imageUrl  String
-  href      String   @default("/jelajah")
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-}
-
-// Traveller reviews ("Ulasan"). User-submitted reviews start unpublished.
+// Ulasan dari halaman Bantuan; disimpan belum terbit untuk dimoderasi.
 model Review {
   id          String   @id @default(cuid())
   authorName  String
-  authorRole  String?
-  avatarUrl   String?
   rating      Int
   content     String   @db.Text
   isPublished Boolean  @default(true)
@@ -344,25 +315,25 @@ model Story {
 }
 
 model Visit {
-  id          String         @id @default(cuid())
-  objectId    String
-  object      CulturalObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
-  eventId     String?
-  event       CulturalEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  userId      String?
-  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  visitorName String
-  contact     String?
-  partySize   Int            @default(1)
-  visitDate   DateTime       @db.Date
-  status      VisitStatus    @default(BOOKED)
-  source      VisitSource    @default(ONLINE)
-  note        String?
+  id           String         @id @default(cuid())
+  objectId     String
+  object       CulturalObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  eventId      String?
+  event        CulturalEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  userId       String?
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorName  String
+  contact      String?
+  partySize    Int            @default(1)
+  visitDate    DateTime       @db.Date
+  status       VisitStatus    @default(BOOKED)
+  source       VisitSource    @default(ONLINE)
+  note         String?
   // Diisi saat pengelola membatalkan / mengubah jadwal; ditampilkan di rencana pengguna.
   changeNotice String?
-  changedAt   DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  changedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   // Satu pendaftaran per pengguna per tempat per tanggal (baris yang dibatalkan dipakai ulang saat mendaftar lagi).
   @@unique([userId, objectId, visitDate])
