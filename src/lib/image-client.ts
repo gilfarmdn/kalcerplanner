@@ -3,7 +3,7 @@
 const MAX_SIDE = 1600;
 
 /** Mengecilkan foto. Mengembalikan File JPEG, atau melempar galat berbahasa Indonesia. */
-export async function shrinkImage(file: File): Promise<File> {
+async function shrinkImage(file: File): Promise<File> {
   if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Format foto harus JPG, PNG, atau WebP");
   if (file.size > 15 * 1024 * 1024) throw new Error("Foto terlalu besar (maksimal 15 MB sebelum dikecilkan)");
 
