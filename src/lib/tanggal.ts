@@ -15,5 +15,10 @@ export function formatRentang(start: Date | string, end: Date | string) {
   return s.getTime() === e.getTime() ? shortFmt.format(s) : `${shortFmt.format(s)} – ${shortFmt.format(e)}`;
 }
 
+/** 'YYYY-MM-DD' -> Date UTC tengah malam. */
+export const toDay = (s: string) => new Date(`${s}T00:00:00.000Z`);
+/** Date -> 'YYYY-MM-DD' (hari UTC). */
+export const dayString = (d: Date) => d.toISOString().slice(0, 10);
+
 /** Hari ini (YYYY-MM-DD) menurut waktu Jakarta. */
 export const hariIniJakarta = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
