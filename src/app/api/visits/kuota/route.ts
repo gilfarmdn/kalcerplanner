@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { ACTIVE_VISIT, canCancel, filledOn, openOn } from "@/lib/kuota";
-import { dayString, err, toDay } from "@/lib/pelaku-api";
+import { dayString, toDay, hariIniJakarta } from "@/lib/tanggal";
+import { fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { hariIniJakarta } from "@/lib/tanggal";
 
 /**
  * Sisa kuota sebuah tempat pada satu tanggal, plus pendaftaran milik pengguna: untuk tanggal itu bila ada,
@@ -11,18 +11,18 @@ import { hariIniJakarta } from "@/lib/tanggal";
  */
 export async function GET(req: Request) {
   const user = await getUser();
-  if (!user) return err("Silakan masuk terlebih dahulu", 401);
+  if (!user) return fail("Silakan masuk terlebih dahulu", 401);
 
   const url = new URL(req.url);
   const objectId = url.searchParams.get("objectId") ?? "";
   const date = url.searchParams.get("date") ?? "";
-  if (!objectId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return err("Parameter tidak valid");
+  if (!objectId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return fail("Parameter tidak valid");
 
   const object = await prisma.culturalObject.findFirst({
     where: { id: objectId, status: { in: ["VERIFIED", "SEED"] } },
     select: { id: true, isEvent: true, weekdays: true, dailyQuota: true, events: { where: { isActive: true } } },
   });
-  if (!object) return err("Destinasi tidak ditemukan", 404);
+  if (!object) return fail("Destinasi tidak ditemukan", 404);
 
   const today = toDay(hariIniJakarta());
   const [filled, visits] = await Promise.all([
