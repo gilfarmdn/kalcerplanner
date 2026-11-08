@@ -130,3 +130,5 @@ dist
 .pnp.*
 
 docker-compose.yml
+# Backup database lokal (berisi data pengguna)
+backups/
