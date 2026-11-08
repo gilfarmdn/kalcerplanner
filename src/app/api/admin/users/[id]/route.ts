@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { fail, guard, readBody } from "@/lib/api";
 import { noticeVisits, upcomingVisits } from "@/lib/kuota";
-import { toDay } from "@/lib/pelaku-api";
+import { toDay, hariIniJakarta } from "@/lib/tanggal";
 import { prisma } from "@/lib/prisma";
-import { hariIniJakarta } from "@/lib/tanggal";
 
 const actionSchema = z.object({ action: z.enum(["DEACTIVATE", "ACTIVATE"]) });
 
