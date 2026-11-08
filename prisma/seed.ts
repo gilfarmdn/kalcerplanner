@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "../src/lib/password";
 import { SOURCE_NOTE, yogyakartaEvents, yogyakartaObjects } from "./data/yogyakarta";
 
 const prisma = new PrismaClient();
@@ -77,26 +77,6 @@ async function seedCulture() {
   }
 }
 
-async function seedLanding() {
-  // Remove demo content from the first version of the project (generic, not Yogyakarta-specific).
-  await prisma.highlight.deleteMany({ where: { imageUrl: { startsWith: "/images/highlight-" } } });
-  await prisma.review.deleteMany({
-    where: { authorName: { in: ["KalcerPlanner", "Sari Wulandari", "Budi Santoso", "Dewi Lestari"] }, avatarUrl: "/images/avatar.svg" },
-  });
-  // The "Partner" table was removed from the schema; nothing to clean up here.
-
-  const highlights = await prisma.highlight.count();
-  if (highlights === 0) {
-    await prisma.highlight.createMany({
-      data: [
-        { title: "Menyusuri Sumbu Filosofi", imageUrl: "/api/placeholder/sumbu-filosofi", href: "/jelajah/sumbu-filosofi", sortOrder: 1 },
-        { title: "Belajar Batik di Giriloyo", imageUrl: "/api/placeholder/batik-giriloyo", href: "/jelajah/batik-giriloyo", sortOrder: 2 },
-        { title: "Wayang Kulit di Sonobudoyo", imageUrl: "/api/placeholder/wayang-kulit-sonobudoyo", href: "/jelajah/wayang-kulit-sonobudoyo", sortOrder: 3 },
-      ],
-    });
-  }
-}
-
 /** Optional: create an ADMIN (curator) account from env vars so the first deployment can verify data. */
 async function seedAdmin() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -117,7 +97,7 @@ async function seedAdmin() {
     data: {
       name: "Kurator KalcerPlanner",
       email,
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash: await hashPassword(password),
       role: "ADMIN",
       emailVerifiedAt: new Date(),
     },
@@ -127,7 +107,6 @@ async function seedAdmin() {
 
 async function main() {
   await seedCulture();
-  await seedLanding();
   await seedAdmin();
   console.log("Seed complete.");
 }
