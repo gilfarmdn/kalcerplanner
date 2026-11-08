@@ -3,6 +3,7 @@ import AuthForm from "@/components/AuthForm";
 import AuthLayout from "@/components/AuthLayout";
 import LogoutIfSignedIn from "@/components/LogoutIfSignedIn";
 import { safeNext } from "@/lib/safe-next";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = { title: "Daftar — KalcerPlanner" };
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default async function DaftarPage({ searchParams }: { searchParams: { nex
   return (
     <AuthLayout>
       <LogoutIfSignedIn />
-      <AuthForm mode="register" next={next} />
+      <AuthForm mode="register" next={next} turnstileSiteKey={turnstileSiteKey()} />
     </AuthLayout>
   );
 }
