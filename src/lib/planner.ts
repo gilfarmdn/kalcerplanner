@@ -124,7 +124,7 @@ const DAY_MS = 86_400_000;
 const parseDay = (s: string) => Date.parse(`${s}T00:00:00.000Z`);
 const toIsoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
-export function tripDays(startDate: string, endDate: string): number {
+function tripDays(startDate: string, endDate: string): number {
   const n = Math.round((parseDay(endDate) - parseDay(startDate)) / DAY_MS) + 1;
   return Math.min(MAX_DAYS, Math.max(1, Number.isFinite(n) ? n : 1));
 }
