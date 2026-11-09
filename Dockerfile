@@ -21,6 +21,8 @@ FROM base AS migrator
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY prisma ./prisma
+COPY tsconfig.json ./
+COPY src ./src
 CMD ["sh", "-c", "npx prisma db push --skip-generate && npx prisma db seed"]
 
 # ---- production runtime ----
