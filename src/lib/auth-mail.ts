@@ -45,7 +45,7 @@ export async function sendVerificationEmail(
     intro: "Terima kasih telah mendaftar di KalcerPlanner. Verifikasi alamat email kamu agar akun bisa dipakai.",
     button: "Verifikasi email",
     url,
-    outro: "Tautan berlaku 24 jam. Jika kamu tidak merasa mendaftar, abaikan email ini.",
+    outro: "Tautan berlaku 5 menit. Jika kamu tidak merasa mendaftar, abaikan email ini.",
   });
   await sendMail({ to: user.email, subject: "Verifikasi email KalcerPlanner", text, html });
 }
@@ -57,7 +57,7 @@ export async function sendResetEmail(req: Request, user: { name: string; email: 
     intro: "Kami menerima permintaan untuk mengatur ulang password akun KalcerPlanner kamu.",
     button: "Atur ulang password",
     url,
-    outro: "Tautan berlaku 1 jam dan hanya bisa dipakai sekali. Jika kamu tidak memintanya, abaikan email ini; password kamu tidak berubah.",
+    outro: "Tautan berlaku 5 menit dan hanya bisa dipakai sekali. Jika kamu tidak memintanya, abaikan email ini; password kamu tidak berubah.",
   });
   await sendMail({ to: user.email, subject: "Atur ulang password KalcerPlanner", text, html });
 }
