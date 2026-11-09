@@ -5,6 +5,7 @@ import { sendVerificationEmail } from "@/lib/auth-mail";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
 import { emailOnlySchema } from "@/lib/validators";
+import { canSendTo } from "@/lib/email-check";
 
 /** Kirim ulang email verifikasi. Selalu menjawab sukses agar tidak membocorkan email mana yang terdaftar. */
 export async function POST(req: Request) {
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
       where: { email: parsed.data.email },
       select: { id: true, name: true, email: true, emailVerifiedAt: true },
     });
-    if (user && !user.emailVerifiedAt) {
+        if (user && !user.emailVerifiedAt && (await canSendTo(user.email))) {
       const token = await issueToken(user.id, "VERIFY_EMAIL");
       await sendVerificationEmail(req, user, token, parsed.data.next);
     }
