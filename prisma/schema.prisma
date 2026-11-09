@@ -350,3 +350,10 @@ model ObjectImage {
   size      Int
   createdAt DateTime       @default(now())
 }
+
+model EmailBounce {
+  email     String   @id
+  reason    String
+  createdAt DateTime @default(now())
+}
+
