@@ -166,25 +166,37 @@ function gmailProblem(email: string): string | null {
   return null;
 }
 
-export const registerSchema = z.object({
-  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(80),
-  email: emailField.superRefine((email, ctx) => {
-    const problem = gmailProblem(email);
-    if (problem) ctx.addIssue({ code: "custom", message: problem });
-  }),
-  password: z.string().min(8, "Password minimal 8 karakter").max(72, "Password maksimal 72 karakter"),
-  // Self-service roles only; ADMIN is created through the seed (ADMIN_EMAIL / ADMIN_PASSWORD).
-  role: z.enum(["TRAVELER", "PRACTITIONER"]).default("TRAVELER"),
-  /** Tujuan setelah verifikasi dan masuk (dibawa lewat tautan email). Divalidasi ulang dengan safeNext. */
-  next: z.string().max(2000).optional(),
-});
+const strongPassword = z
+  .string()
+  .min(8, "Password minimal 8 karakter")
+  .max(72, "Password maksimal 72 karakter")
+  .regex(/[a-z]/, "Password harus mengandung huruf kecil")
+  .regex(/[A-Z]/, "Password harus mengandung huruf besar")
+  .regex(/[0-9]/, "Password harus mengandung angka")
+  .regex(/[^A-Za-z0-9]/, "Password harus mengandung simbol");
+
+export const registerSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nama minimal 2 karakter").max(80),
+    email: emailField.superRefine((email, ctx) => {
+      const problem = gmailProblem(email);
+      if (problem) ctx.addIssue({ code: "custom", message: problem });
+    }),
+    password: strongPassword,
+    confirmPassword: z.string(),
+    role: z.enum(["TRAVELER", "PRACTITIONER"]).default("TRAVELER"),
+    next: z.string().max(2000).optional(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Konfirmasi password tidak sama",
+    path: ["confirmPassword"],
+  });
 
 const tokenField = z.string().trim().min(20, "Tautan tidak valid").max(200, "Tautan tidak valid");
-const newPasswordField = z.string().min(8, "Password minimal 8 karakter").max(72, "Password maksimal 72 karakter");
+export const resetPasswordSchema = z.object({ token: tokenField, password: strongPassword });
 
 export const emailOnlySchema = z.object({ email: emailField, next: z.string().max(2000).optional() });
 export const verifyEmailSchema = z.object({ token: tokenField });
-export const resetPasswordSchema = z.object({ token: tokenField, password: newPasswordField });
 
 export const loginSchema = z.object({
   email: emailField,
