@@ -31,6 +31,9 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  experimental: {
+    instrumentationHook: true,          
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   async headers() {
