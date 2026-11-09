@@ -7,6 +7,7 @@ import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
 import { TURNSTILE_FAILED, verifyTurnstile } from "@/lib/turnstile";
 import { registerSchema } from "@/lib/validators";
+import { canSendTo } from "@/lib/email-check";
 
 /** Mendaftar: akun dibuat BELUM terverifikasi dan belum masuk; tautan verifikasi dikirim lewat email. */
 export async function POST(req: Request) {
@@ -26,6 +27,10 @@ export async function POST(req: Request) {
       select: { id: true, emailVerifiedAt: true },
     });
     if (existing?.emailVerifiedAt) return fail("Email sudah terdaftar. Silakan masuk.", 409);
+    
+    if (!(await canSendTo(parsed.data.email))) {
+      return fail("Alamat email ini tidak dapat menerima email. Gunakan alamat lain.", 400);
+    }
 
     const passwordHash = await hashPassword(parsed.data.password);
     const data = { name: parsed.data.name, passwordHash, role: parsed.data.role };
