@@ -18,6 +18,7 @@ export default function AuthForm({ mode, next, turnstileSiteKey = null }: Props)
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<"TRAVELER" | "PRACTITIONER">("TRAVELER");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -31,8 +32,14 @@ export default function AuthForm({ mode, next, turnstileSiteKey = null }: Props)
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (!isLogin) {
+      if (password !== confirmPassword) return setError("Konfirmasi password tidak sama");
+      if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password))
+        return setError("Password harus mengandung huruf besar, huruf kecil, angka, dan simbol");
+    }
     setNotice(null);
     setNeedsVerify(false);
+    body: JSON.stringify(isLogin ? { email, password, next } : { name, email, password, confirmPassword, role, next, turnstileToken: captcha }),
     setLoading(true);
     try {
       const res = await fetch(isLogin ? "/api/auth/login" : "/api/auth/register", {
@@ -147,10 +154,18 @@ export default function AuthForm({ mode, next, turnstileSiteKey = null }: Props)
             autoComplete={isLogin ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={isLogin ? "******" : "Minimal 8 karakter"}
+            placeholder={isLogin ? "******" : "Min. 8 karakter, huruf besar, kecil, angka, simbol"}
             className={inputClass}
           />
         </label>
+
+        {!isLogin && (
+          <label className="flex flex-col gap-2 text-base">
+            Ulangi Password
+            <input required type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputClass} />
+          </label>
+        )}
+
 
         {needsCaptcha && <Turnstile ref={turnstile} siteKey={turnstileSiteKey} onToken={setCaptcha} />}
 
