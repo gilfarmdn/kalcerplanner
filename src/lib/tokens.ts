@@ -8,8 +8,8 @@ import { prisma } from "@/lib/prisma";
 export type TokenKind = "VERIFY_EMAIL" | "RESET_PASSWORD";
 
 const TTL_MS: Record<TokenKind, number> = {
-  VERIFY_EMAIL: 24 * 60 * 60 * 1000, // 24 jam
-  RESET_PASSWORD: 60 * 60 * 1000, // 1 jam
+  VERIFY_EMAIL: 5 * 60 * 60 * 1000, // 24 jam
+  RESET_PASSWORD: 5 * 60 * 1000, // 1 jam
 };
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
