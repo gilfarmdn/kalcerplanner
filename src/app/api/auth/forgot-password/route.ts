@@ -6,6 +6,7 @@ import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
 import { TURNSTILE_FAILED, verifyTurnstile } from "@/lib/turnstile";
 import { emailOnlySchema } from "@/lib/validators";
+import { canSendTo } from "@/lib/email-check";
 
 /** Meminta tautan reset password. Tautan hanya dikirim ke email yang terdaftar; email lain ditolak dengan pesan jelas. */
 export async function POST(req: Request) {
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
       select: { id: true, name: true, email: true },
     });
     if (!user) return fail("Email tidak terdaftar. Periksa kembali atau daftar akun baru.", 404, "EMAIL_NOT_FOUND");
+    if (!(await canSendTo(user.email))) return NextResponse.json({ ok: true, email: user.email }); // jangan kirim ke alamat bounce
+
     const token = await issueToken(user.id, "RESET_PASSWORD");
     await sendResetEmail(req, user, token);
     return NextResponse.json({ ok: true, email: user.email });
