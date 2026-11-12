@@ -7,7 +7,7 @@ export default async function PlatformStats() {
   try {
     const visible = { status: { in: [...VISIBLE_STATUSES] }, isEvent: false };
     const [users, objects, events, partners] = await Promise.all([
-      prisma.user.count({ where: { role: "TRAVELER" } }), // Pengguna Platform
+      prisma.user.count(), // Pengguna Platform
       prisma.culturalObject.count({ where: visible }), // Destinasi Budaya
       prisma.culturalEvent.count({ where: { isActive: true, ...visibleEvent } }), // Agenda Budaya
       prisma.culturalObject.count({ where: { ...visible, localRun: true } }), // Mitra Lokal
