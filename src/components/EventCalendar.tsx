@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { monthNames } from "@/lib/culture";
-import { eventOccursOn, monthCells, showOccursOn, type CalEvent, type CalShow } from "@/lib/kalender";
+import { eventOccursOn, monthCells, type CalEvent } from "@/lib/kalender";
 import { formatHariPanjang } from "@/lib/tanggal";
 
 const DAY_HEADERS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"] as const;
 
-/** Satu baris kegiatan yang siap ditampilkan (event tahunan maupun pertunjukan rutin). */
+/** Satu baris kegiatan yang siap ditampilkan (semuanya berasal dari tabel CulturalEvent). */
 type Item = {
   key: string;
   title: string;
@@ -17,18 +17,15 @@ type Item = {
   description: string;
   location: string | null;
   href: string | null;
-  tag: string | null;
   imageUrl: string | null;
 };
 
 export default function EventCalendar({
   events,
-  shows,
   zones,
   today,
 }: {
   events: CalEvent[];
-  shows: CalShow[];
   zones: string[];
   today: string;
 }) {
@@ -38,10 +35,9 @@ export default function EventCalendar({
   const [zone, setZone] = useState("");
 
   const visibleEvents = zone ? events.filter((e) => e.zone === zone) : events;
-  const visibleShows = zone ? shows.filter((s) => s.zone === zone) : shows;
 
   function itemsOn(ymd: string): Item[] {
-    const fromEvents: Item[] = visibleEvents
+    return visibleEvents
       .filter((e) => eventOccursOn(e, ymd))
       .map((e) => ({
         key: `e-${e.id}`,
@@ -50,22 +46,8 @@ export default function EventCalendar({
         description: e.description,
         location: e.location,
         href: e.href !== undefined ? e.href : e.objectSlug ? `/jelajah/${e.objectSlug}` : null,
-        tag: null,
         imageUrl: e.imageUrl,
       }));
-    const fromShows: Item[] = visibleShows
-      .filter((s) => showOccursOn(s, ymd))
-      .map((s) => ({
-        key: `s-${s.slug}`,
-        title: s.name,
-        zone: s.zone,
-        description: s.description,
-        location: s.location,
-        href: `/jelajah/${s.slug}`,
-        tag: "Pertunjukan rutin",
-        imageUrl: null,
-      }));
-    return [...fromEvents, ...fromShows];
   }
 
   function shiftMonth(delta: number) {
@@ -177,7 +159,6 @@ export default function EventCalendar({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={it.imageUrl} alt={it.title} className="mb-3 h-40 w-full rounded-md object-cover" />
                 )}
-                {it.tag && <p className="text-xs font-semibold text-brand-brown">{it.tag}</p>}
                 <h4 className="text-xl font-semibold">{it.title}</h4>
                 {it.zone && <p className="text-sm text-neutral-700">{it.zone}</p>}
                 <p className="mt-3">{it.description}</p>
