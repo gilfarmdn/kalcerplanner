@@ -150,12 +150,12 @@ export default function Navbar({ user }: { user: { name: string; role?: Role; av
               </li>
             ))}
           </ul>
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             {authButton}
             <span className="inline-flex items-center gap-2 text-lg font-semibold">
               <Globe size={20} /> IDN
             </span>
-          </div>
+          </div> */}
         </div>
       )}
     </header>
