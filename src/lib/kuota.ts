@@ -30,25 +30,25 @@ export const toSchedule = (e: ScheduleRow) => ({
   exceptDates: e.exceptDates,
 });
 
-/**
- * Apakah tempat bisa dikunjungi pada tanggal itu? Event: salah satu jadwal event aktifnya berlangsung
- * (mengembalikan event tersebut). Destinasi biasa: hari buka (kosong = setiap hari).
- */
-export function openOn(
-  o: { isEvent: boolean; weekdays: number[]; events: ScheduleRow[] },
-  date: string,
-): { open: boolean; eventId: string | null } {
-  if (o.isEvent) {
-    const ev = o.events.find((e) => eventOccursOn(toSchedule(e), date));
-    return { open: !!ev, eventId: ev?.id ?? null };
-  }
-  return { open: o.weekdays.length === 0 || o.weekdays.includes(weekdayOf(date)), eventId: null };
-}
+/** Destinasi bisa dikunjungi pada tanggal itu bila termasuk hari buka (kosong = setiap hari). */
+export const objectOpenOn = (o: { weekdays: number[] }, date: string): boolean =>
+  o.weekdays.length === 0 || o.weekdays.includes(weekdayOf(date));
 
-export async function filledOn(objectId: string, date: string, db: Prisma.TransactionClient = prisma): Promise<number> {
+/** Event mandiri berlangsung pada tanggal itu bila tanggalnya termasuk jadwal event. */
+export const eventOpenOn = (e: ScheduleRow, date: string): boolean => eventOccursOn(toSchedule(e), date);
+
+/**
+ * Tujuan pendaftaran: destinasi (`objectId`, boleh dengan `eventId` yang menandai kegiatan di destinasi itu)
+ * atau event mandiri (hanya `eventId`). Kuota dihitung per tujuan.
+ */
+export type VisitTarget = { objectId: string; eventId?: string | null } | { objectId?: null; eventId: string };
+
+const targetWhere = (t: VisitTarget) => (t.objectId ? { objectId: t.objectId } : { eventId: t.eventId! });
+
+export async function filledOn(target: VisitTarget, date: string, db: Prisma.TransactionClient = prisma): Promise<number> {
   const agg = await db.visit.aggregate({
     _sum: { partySize: true },
-    where: { objectId, visitDate: toDay(date), status: { in: [...ACTIVE_VISIT] } },
+    where: { ...targetWhere(target), visitDate: toDay(date), status: { in: [...ACTIVE_VISIT] } },
   });
   return agg._sum.partySize ?? 0;
 }
@@ -68,36 +68,44 @@ export class KuotaError extends Error {
  */
 export async function registerVisit(input: {
   user: { id: string; name: string; email: string };
-  objectId: string;
+  target: VisitTarget;
   date: string;
   partySize: number;
-  eventId: string | null;
   contact?: string;
   note?: string;
 }) {
-  const { user, objectId, date, partySize } = input;
+  const { user, target, date, partySize } = input;
   const visitDate = toDay(date);
   try {
     return await prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<{ dailyQuota: number | null }[]>`
-        SELECT "dailyQuota" FROM "CulturalObject" WHERE id = ${objectId} FOR UPDATE`;
+      // Baris tujuan dikunci supaya pendaftaran bersamaan dilayani bergiliran.
+      const locked = target.objectId
+        ? await tx.$queryRaw<{ dailyQuota: number | null }[]>`
+            SELECT "dailyQuota" FROM "CulturalObject" WHERE id = ${target.objectId} FOR UPDATE`
+        : await tx.$queryRaw<{ dailyQuota: number | null }[]>`
+            SELECT "dailyQuota" FROM "CulturalEvent" WHERE id = ${target.eventId} FOR UPDATE`;
       const quota = locked[0]?.dailyQuota ?? null;
       if (quota === null) throw new KuotaError("Tempat ini tidak memerlukan pendaftaran");
 
-      const existing = await tx.visit.findUnique({
-        where: { userId_objectId_visitDate: { userId: user.id, objectId, visitDate } },
-        select: { id: true, status: true },
-      });
+      const existing = target.objectId
+        ? await tx.visit.findUnique({
+            where: { userId_objectId_visitDate: { userId: user.id, objectId: target.objectId, visitDate } },
+            select: { id: true, status: true },
+          })
+        : await tx.visit.findUnique({
+            where: { userId_eventId_visitDate: { userId: user.id, eventId: target.eventId!, visitDate } },
+            select: { id: true, status: true },
+          });
       if (existing && existing.status !== "CANCELLED") throw new KuotaError("Kamu sudah terdaftar di tempat ini pada tanggal tersebut", 409);
 
-      const filled = await filledOn(objectId, date, tx);
+      const filled = await filledOn(target, date, tx);
       if (filled + partySize > quota) {
         const left = Math.max(0, quota - filled);
         throw new KuotaError(left === 0 ? "Kuota pada tanggal ini sudah penuh" : `Kuota tidak cukup. Sisa ${left} slot`, 409);
       }
 
       const data = {
-        eventId: input.eventId,
+        eventId: target.eventId ?? null,
         visitorName: user.name,
         contact: input.contact ?? user.email,
         partySize,
@@ -109,7 +117,7 @@ export async function registerVisit(input: {
       };
       return existing
         ? tx.visit.update({ where: { id: existing.id }, data, select: { id: true } })
-        : tx.visit.create({ data: { ...data, objectId, userId: user.id, visitDate }, select: { id: true } });
+        : tx.visit.create({ data: { ...data, objectId: target.objectId ?? null, userId: user.id, visitDate }, select: { id: true } });
     });
   } catch (error) {
     // Dua permintaan dari pengguna yang sama pada saat bersamaan: yang kedua ditolak oleh indeks unik.
@@ -125,8 +133,11 @@ type NoticeTarget = {
   visitDate: Date;
   partySize: number;
   user: { name: string; email: string } | null;
-  object: { name: string; slug: string };
+  object: { name: string; slug: string } | null;
+  event: { title: string; slug: string } | null;
 };
+
+const placeName = (v: NoticeTarget) => v.object?.name ?? v.event?.title ?? "tempat ini";
 
 /**
  * Tandai kunjungan terdaftar yang terdampak perubahan dari pengelola, lalu kabari penggunanya lewat email.
@@ -145,13 +156,13 @@ export async function noticeVisits(visits: NoticeTarget[], notice: string, cance
         const tgl = formatHariPanjang(v.visitDate);
         const text =
           `Halo ${v.user!.name},\n\n` +
-          `Ada perubahan untuk kunjunganmu ke ${v.object.name} pada ${tgl} (${v.partySize} orang):\n\n` +
+          `Ada perubahan untuk kunjunganmu ke ${placeName(v)} pada ${tgl} (${v.partySize} orang):\n\n` +
           `${notice}\n\n` +
           (cancel ? "Pendaftaranmu dibatalkan dan kuota dikembalikan.\n\n" : "Pendaftaranmu tetap berlaku.\n\n") +
           "Salam,\nKalcerPlanner";
         return sendMail({
           to: v.user!.email,
-          subject: `Perubahan kunjungan: ${v.object.name}`,
+          subject: `Perubahan kunjungan: ${placeName(v)}`,
           text,
           html: text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>"),
         }).catch((error) => console.error("[kuota] email gagal", error));
@@ -169,6 +180,7 @@ export function upcomingVisits(where: Prisma.VisitWhereInput) {
       partySize: true,
       user: { select: { name: true, email: true } },
       object: { select: { name: true, slug: true } },
+      event: { select: { title: true, slug: true } },
     },
   });
 }
