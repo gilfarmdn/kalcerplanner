@@ -5,7 +5,6 @@ import { fail, firstIssue, guard, readBody } from "@/lib/api";
 import { SOURCE_NOTE_SUBMITTED } from "@/lib/culture";
 import { resolveImageUrl } from "@/lib/images";
 import { objectProposalSchema } from "@/lib/validators";
-import { eventScheduleData } from "@/lib/pelaku-api";
 
 const slugify = (s: string) =>
   s
@@ -15,7 +14,10 @@ const slugify = (s: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 60) || "objek";
 
-/** Practitioners propose cultural objects; they stay PENDING (hidden from recommendations) until verified. */
+/**
+ * Practitioners propose cultural objects; they stay PENDING (hidden from recommendations) until verified.
+ * Event budaya tidak lewat sini: lihat POST /api/events (tabel CulturalEvent).
+ */
 export async function POST(req: Request) {
   const g = await guard(["PRACTITIONER"]);
   if (!g.ok) return g.error;
@@ -28,12 +30,6 @@ export async function POST(req: Request) {
 
   const imageUrl = await resolveImageUrl(g.user, d.imageUrl);
   if (imageUrl === false) return fail("Foto tidak valid, silakan unggah ulang");
-
-  if (d.isEvent) {
-    if (d.eventRecurrence === "WEEKLY" && d.eventWeekdays.length === 0) return fail("Pilih minimal satu hari berlangsung");
-    if (!d.eventStartsOn) return fail("Isi tanggal mulai event");
-    if (d.eventEndsOn && d.eventEndsOn < d.eventStartsOn) return fail("Tanggal selesai tidak boleh sebelum tanggal mulai");
-  }
 
   try {
     const created = await prisma.culturalObject.create({
@@ -64,27 +60,6 @@ export async function POST(req: Request) {
         status: "PENDING",
         verifiedAt: null,
         ownerId: g.user.id,
-        isEvent: d.isEvent,
-        ...(d.isEvent && d.eventStartsOn
-          ? {
-            events: {
-              create: {
-                slug: `${slugify(d.name)}-${randomBytes(2).toString("hex")}`,
-                title: d.name,
-                description: d.summary,
-                interest: d.interest,
-                zone: d.zone,
-                ...eventScheduleData({
-                  startsOn: d.eventStartsOn,
-                  endsOn: d.eventEndsOn,
-                  recurrence: d.eventRecurrence,
-                  weekdays: d.eventWeekdays,
-                  exceptDates: d.eventExceptDates,
-                }),
-              },
-            },
-          }
-        : {}),
       },
       select: { id: true, slug: true, status: true },
     });
