@@ -110,7 +110,13 @@ async function seedAdmin() {
 }
 
 async function main() {
-  await seedCulture();
+  // Data sampel Yogyakarta hanya untuk pengembangan / demo. Produksi tidak memakainya, jadi default-nya mati:
+  // set SEED_SAMPLE_DATA=true untuk menyalakannya. Akun kurator (ADMIN_EMAIL) tetap dibuat apa pun nilainya.
+  if (process.env.SEED_SAMPLE_DATA === "true") {
+    await seedCulture();
+  } else {
+    console.log("Data sampel dilewati (SEED_SAMPLE_DATA bukan true).");
+  }
   await seedAdmin();
   console.log("Seed complete.");
 }
