@@ -39,13 +39,12 @@ export default function AuthForm({ mode, next, turnstileSiteKey = null }: Props)
     }
     setNotice(null);
     setNeedsVerify(false);
-    body: JSON.stringify(isLogin ? { email, password, next } : { name, email, password, confirmPassword, role, next, turnstileToken: captcha }),
     setLoading(true);
     try {
       const res = await fetch(isLogin ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isLogin ? { email, password, next } : { name, email, password, role, next, turnstileToken: captcha }),
+        body: JSON.stringify(isLogin ? { email, password, next } : { name, email, password, confirmPassword, role, next, turnstileToken: captcha }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
