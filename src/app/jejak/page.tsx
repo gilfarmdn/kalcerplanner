@@ -5,7 +5,7 @@ import DashboardShell from "@/components/DashboardShell";
 import SiteShell from "@/components/SiteShell";
 import { requireUser } from "@/lib/auth";
 import { badgeName, formatRupiah, INTERESTS, interestInfo } from "@/lib/culture";
-import { objectImage, VISIBLE_STATUSES } from "@/lib/culture-db";
+import { objectImage, plannableEvent, VISIBLE_STATUSES } from "@/lib/culture-db";
 import { formatDay } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
@@ -15,18 +15,34 @@ export const dynamic = "force-dynamic";
 export default async function JejakPage() {
   const user = await requireUser("/jejak");
 
-  const [stamps, totalObjects, impact] = await Promise.all([
+  const [stampRows, totalObjects, totalEvents, impact] = await Promise.all([
     prisma.stamp.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
-      include: { object: { select: { slug: true, name: true, zone: true, interest: true, imageUrl: true } } },
+      include: {
+        object: { select: { slug: true, name: true, zone: true, interest: true, imageUrl: true } },
+        event: { select: { slug: true, title: true, zone: true, interest: true, imageUrl: true } },
+      },
     }),
     prisma.culturalObject.count({ where: { status: { in: [...VISIBLE_STATUSES] } } }),
+    prisma.culturalEvent.count({ where: plannableEvent }),
     prisma.trip.aggregate({ where: { userId: user.id }, _sum: { impactIdr: true }, _count: { _all: true } }),
   ]);
 
-  const earned = new Set(stamps.map((s) => s.object.interest));
-  const progress = totalObjects ? Math.round((stamps.length / totalObjects) * 100) : 0;
+  // Stempel destinasi maupun event mandiri disatukan: nama, tautan, dan tema diambil dari yang tersedia.
+  const stamps = stampRows.map((s) => ({
+    id: s.id,
+    note: s.note,
+    createdAt: s.createdAt,
+    name: s.object?.name ?? s.event?.title ?? "-",
+    zone: s.object?.zone ?? s.event?.zone ?? "",
+    interest: s.object?.interest ?? s.event?.interest ?? null,
+    href: s.object ? `/jelajah/${s.object.slug}` : s.event ? `/jelajah/event/${s.event.slug}` : "#",
+    image: objectImage((s.object ?? s.event)!),
+  }));
+  const total = totalObjects + totalEvents;
+  const earned = new Set(stamps.flatMap((s) => (s.interest ? [s.interest] : [])));
+  const progress = total ? Math.round((stamps.length / total) * 100) : 0;
 
   return (
     <SiteShell>
@@ -39,7 +55,7 @@ export default async function JejakPage() {
           <div className="rounded-[10px] border border-black bg-white p-4 text-center">
             <dt className="text-sm text-neutral-600">Stempel</dt>
             <dd className="text-3xl font-bold">
-              {stamps.length} <span className="text-base font-medium text-neutral-600">/ {totalObjects}</span>
+              {stamps.length} <span className="text-base font-medium text-neutral-600">/ {total}</span>
             </dd>
             <dd className="text-xs text-neutral-600">{progress}% paspor budaya</dd>
           </div>
@@ -80,14 +96,14 @@ export default async function JejakPage() {
             {stamps.map((s) => (
               <li key={s.id} className="flex gap-4 rounded-[10px] border border-black bg-white p-3">
                 <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-[5px]">
-                  <Image src={objectImage(s.object)} alt="" fill unoptimized sizes="80px" className="object-cover" />
+                  <Image src={s.image} alt="" fill unoptimized sizes="80px" className="object-cover" />
                 </div>
                 <div className="min-w-0">
-                  <Link href={`/jelajah/${s.object.slug}`} className="font-semibold hover:underline">
-                    {s.object.name}
+                  <Link href={s.href} className="font-semibold hover:underline">
+                    {s.name}
                   </Link>
                   <p className="text-xs text-neutral-600">
-                    {s.object.zone} · {formatDay(s.createdAt)}
+                    {s.zone} · {formatDay(s.createdAt)}
                   </p>
                   {s.note && <p className="mt-1 text-sm italic">“{s.note}”</p>}
                 </div>
