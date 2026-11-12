@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /** Curator controls: verify (with impact flags) or reject a submitted object. */
-export default function VerifyButtons({ objectId }: { objectId: string }) {
+export default function VerifyButtons({ objectId, kind = "object" }: { objectId: string; kind?: "object" | "event" }) {
   const router = useRouter();
   const [localRun, setLocalRun] = useState(true);
   const [hiddenGem, setHiddenGem] = useState(false);
@@ -15,7 +15,7 @@ export default function VerifyButtons({ objectId }: { objectId: string }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/objects/${objectId}`, {
+      const res = await fetch(`/api/${kind === "event" ? "events" : "objects"}/${objectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(action === "VERIFY" ? { action, localRun, hiddenGem } : { action }),
