@@ -41,7 +41,8 @@ async function seedCulture() {
   for (const e of yogyakartaEvents) {
     const exists = await prisma.culturalEvent.findUnique({ where: { slug: e.slug }, select: { id: true } });
     const startsOn = e.startsOn ? new Date(`${e.startsOn}T00:00:00.000Z`) : null;
-    const endsOn = e.endsOn ? new Date(`${e.endsOn}T00:00:00.000Z`) : startsOn;
+    // Jadwal mingguan tanpa tanggal akhir berlaku terus (endsOn kosong); event lain default 1 hari.
+    const endsOn = e.endsOn ? new Date(`${e.endsOn}T00:00:00.000Z`) : e.weekdays?.length ? null : startsOn;
     if (exists) {
       // Event yang sudah ada tidak ditimpa; hanya tanggal pasti dan lokasi yang diisi seed yang diperbarui.
       if (startsOn || e.venue) {
@@ -71,6 +72,9 @@ async function seedCulture() {
         startsOn,
         endsOn,
         repeatsYearly: e.repeatsYearly ?? false,
+        weekdays: e.weekdays ?? [],
+        openTime: e.openTime ?? null,
+        closeTime: e.closeTime ?? null,
         venue: e.venue ?? null,
       },
     });
