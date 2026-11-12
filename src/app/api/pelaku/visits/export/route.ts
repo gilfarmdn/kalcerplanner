@@ -22,6 +22,7 @@ export async function GET(req: Request) {
     from: sp.get("from") ?? undefined,
     to: sp.get("to") ?? undefined,
     objectId: sp.get("objectId") ?? undefined,
+    eventId: sp.get("eventId") ?? undefined,
     status: sp.get("status") ?? undefined,
     q: sp.get("q") ?? undefined,
   });
@@ -37,8 +38,8 @@ export async function GET(req: Request) {
     const lines = rows.map((r) =>
       [
         dayString(r.visitDate),
-        r.object.name,
-        r.event?.title,
+        r.object?.name ?? r.event?.title,
+        r.object ? r.event?.title : "Event mandiri",
         r.visitorName,
         r.contact,
         r.partySize,
