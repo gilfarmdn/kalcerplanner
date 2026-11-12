@@ -21,7 +21,7 @@ export const visitStatusLabel: Record<(typeof VISIT_STATUSES)[number], string> =
 };
 
 const visitBase = {
-  objectId: z.string().min(1, "Pilih destinasi").max(40),
+  objectId: z.string().min(1, "Pilih destinasi").max(40).optional(),
   eventId: z.string().max(40).nullable().optional(),
   visitorName: z.string().trim().min(2, "Nama pengunjung minimal 2 karakter").max(80),
   contact: optionalText(80),
@@ -31,7 +31,9 @@ const visitBase = {
 };
 
 /** Pelaku mencatat kunjungan (mis. tamu walk-in). */
-export const visitCreateSchema = z.object({ ...visitBase, status: z.enum(VISIT_STATUSES).default("ATTENDED") });
+export const visitCreateSchema = z
+  .object({ ...visitBase, status: z.enum(VISIT_STATUSES).default("ATTENDED") })
+  .refine((d) => !!d.objectId || !!d.eventId, { message: "Pilih destinasi atau event", path: ["objectId"] });
 
 /** Ubah sebagian data kunjungan. */
 export const visitUpdateSchema = z
@@ -48,14 +50,16 @@ export const visitUpdateSchema = z
   .refine((v) => Object.keys(v).length > 0, "Tidak ada perubahan");
 
 /** Wisatawan mendaftar kunjungan sendiri dari halaman objek. */
-export const publicVisitSchema = z.object({
-  objectId: visitBase.objectId,
-  eventId: visitBase.eventId,
-  partySize: visitBase.partySize,
-  visitDate: dateString,
-  contact: optionalText(80),
-  note: optionalText(300),
-});
+export const publicVisitSchema = z
+  .object({
+    objectId: visitBase.objectId,
+    eventId: visitBase.eventId,
+    partySize: visitBase.partySize,
+    visitDate: dateString,
+    contact: optionalText(80),
+    note: optionalText(300),
+  })
+  .refine((d) => !!d.objectId || !!d.eventId, { message: "Tujuan pendaftaran tidak valid" });
 
 export const eventSchema = z
   .object({
