@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-/** Claim a Paspor Budaya stamp for a place, with an optional "what I learned" note. */
-export function StampButton({ objectId }: { objectId: string }) {
+/** Claim a Paspor Budaya stamp for a place (destinasi atau event), with an optional "what I learned" note. */
+export function StampButton({ objectId, eventId }: { objectId?: string; eventId?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -18,7 +18,7 @@ export function StampButton({ objectId }: { objectId: string }) {
       const res = await fetch("/api/stamps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objectId, note: note.trim() || undefined }),
+        body: JSON.stringify({ ...(objectId ? { objectId } : { eventId }), note: note.trim() || undefined }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
