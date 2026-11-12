@@ -23,7 +23,7 @@ export default async function TripListPage() {
     where: { userId: user.id },
     orderBy: { startDate: "asc" },
     include: {
-      items: { orderBy: { sortOrder: "asc" }, take: 1, include: { object: { select: { slug: true, imageUrl: true } } } },
+      items: { orderBy: { sortOrder: "asc" }, take: 1, include: { object: { select: { slug: true, imageUrl: true } }, event: { select: { slug: true, imageUrl: true } } } },
       _count: { select: { items: true } },
     },
   });
@@ -34,7 +34,7 @@ export default async function TripListPage() {
     <li className="overflow-hidden rounded-[10px] border border-black bg-white shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
       <div className="relative h-44">
         <Image
-          src={t.items[0] ? objectImage(t.items[0].object) : "/images/hero.svg"}
+          src={t.items[0] && (t.items[0].object ?? t.items[0].event) ? objectImage((t.items[0].object ?? t.items[0].event)!) : "/images/hero.svg"}
           alt=""
           fill
           unoptimized
