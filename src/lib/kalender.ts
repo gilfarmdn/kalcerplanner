@@ -7,6 +7,8 @@ export type CalEvent = {
   description: string;
   location: string | null;
   objectSlug: string | null;
+  /** Tautan detail (event mandiri atau destinasi terkait); null = tanpa tautan. */
+  href?: string | null;
   startsOn: string | null;
   endsOn: string | null;
   repeatsYearly: boolean;
