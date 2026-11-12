@@ -25,7 +25,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   const before = await prisma.culturalObject.findUnique({
     where: { id: existing.id },
-    select: { name: true, isEvent: true, openTime: true, closeTime: true, weekdays: true },
+    select: { name: true, openTime: true, closeTime: true, weekdays: true },
   });
 
   try {
@@ -61,15 +61,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     // Kabari pendaftar bila hari buka atau jam berubah.
     if (before) {
       const visits = await upcomingVisits({ objectId: existing.id });
-      const closed = before.isEvent
-        ? []
-        : visits.filter((v) => d.weekdays.length > 0 && !d.weekdays.includes(weekdayOf(dayString(v.visitDate))));
+      const closed = visits.filter((v) => d.weekdays.length > 0 && !d.weekdays.includes(weekdayOf(dayString(v.visitDate))));
       for (const v of closed) {
         await noticeVisits([v], `${d.name} tidak lagi buka pada ${formatHariPanjang(v.visitDate)} (hari buka diubah pengelola). Silakan daftar ulang pada tanggal lain.`, true);
       }
       if (before.openTime !== d.openTime || before.closeTime !== d.closeTime) {
         const rest = visits.filter((v) => !closed.includes(v));
-        await noticeVisits(rest, `Jam ${before.isEvent ? "acara" : "buka"} ${d.name} diubah pengelola menjadi ${d.openTime}–${d.closeTime} WIB.`, false);
+        await noticeVisits(rest, `Jam buka ${d.name} diubah pengelola menjadi ${d.openTime}–${d.closeTime} WIB.`, false);
       }
     }
     return NextResponse.json({ ok: true, needsReview: true });
