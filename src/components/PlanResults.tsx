@@ -23,7 +23,7 @@ export default function PlanResults({ plans, input, isLoggedIn }: { plans: Plan[
   const today = hariIniJakarta();
   // Tempat / event berkuota di rencana ini (pendaftaran terpisah dari menyimpan rencana).
   const quotaItems = plan.days.flatMap((d) =>
-    d.items.filter((it) => it.object.dailyQuota != null).map((it) => ({ objectId: it.object.id, name: it.object.name, date: d.date })),
+    d.items.filter((it) => it.object.dailyQuota != null).map((it) => ({ ...(it.object.isEvent ? { eventId: it.object.id } : { objectId: it.object.id }), name: it.object.name, date: d.date })),
   );
 
   async function save() {
@@ -144,11 +144,11 @@ export default function PlanResults({ plans, input, isLoggedIn }: { plans: Plan[
                           {slotInfo[it.slot].label} ·{" "}
                           {it.object.isEvent && it.object.openTime ? it.object.openTime.replace(":", ".") : slotInfo[it.slot].start}
                         </p>
-                        <Link href={`/jelajah/${it.object.slug}`} target="_blank" className="text-xl font-semibold hover:underline">
+                        <Link href={it.object.isEvent ? `/jelajah/event/${it.object.slug}` : `/jelajah/${it.object.slug}`} target="_blank" className="text-xl font-semibold hover:underline">
                           {it.object.name}
                         </Link>
                         <p className="text-sm text-neutral-600">
-                          {kindLabel[it.object.kind]} · {it.object.zone} · ±{it.object.durationMin} menit
+                          {it.object.isEvent ? "Event budaya" : kindLabel[it.object.kind]} · {it.object.zone} · ±{it.object.durationMin} menit
                         </p>
                       </div>
                       <p className="text-lg font-semibold">{it.priceIdr === 0 ? "Gratis" : formatRupiah(it.priceIdr)}</p>
@@ -175,7 +175,7 @@ export default function PlanResults({ plans, input, isLoggedIn }: { plans: Plan[
                       {it.object.scheduleNote && <p className="mt-2 text-sm text-amber-800">Jadwal: {it.object.scheduleNote}</p>}
                     </details>
                     {isLoggedIn && it.object.dailyQuota != null && (
-                      <VisitRegistration key={`${it.object.id}-${day.date}`} objectId={it.object.id} defaultDate={day.date} defaultParty={party} minDate={today} />
+                      <VisitRegistration key={`${it.object.id}-${day.date}`} {...(it.object.isEvent ? { eventId: it.object.id } : { objectId: it.object.id })} defaultDate={day.date} defaultParty={party} minDate={today} />
                     )}
                   </li>
                   );
