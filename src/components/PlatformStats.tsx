@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export default async function PlatformStats() {
   let stats: { users: number; objects: number; events: number; partners: number } | null = null;
   try {
-    const visible = { status: { in: [...VISIBLE_STATUSES] }, isEvent: false };
+    const visible = { status: { in: [...VISIBLE_STATUSES] } };
     const [users, objects, events, partners] = await Promise.all([
       prisma.user.count(), // Pengguna Platform
       prisma.culturalObject.count({ where: visible }), // Destinasi Budaya
