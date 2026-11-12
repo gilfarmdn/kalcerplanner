@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth";
 import { roleHome } from "@/lib/role-home";
 import { pickSouvenirs } from "@/lib/content";
 import { formatRupiah, kindLabel, slotInfo, styleLabel, weekdayNames } from "@/lib/culture";
+import { placeKey, placeKindLabel, placeOf } from "@/lib/place";
 import { formatHariPanjang, formatRentang, hariIniJakarta, dayString } from "@/lib/tanggal";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -25,23 +26,32 @@ export default async function TripDetailPage({ params }: { params: { id: string 
 
   const trip = await prisma.trip.findFirst({
     where: { id: params.id, userId: user.id },
-    include: { items: { orderBy: { sortOrder: "asc" }, include: { object: true } } },
+    include: { items: { orderBy: { sortOrder: "asc" }, include: { object: true, event: true } } },
   });
   if (!trip) notFound();
 
   const stamps = await prisma.stamp.findMany({
-    where: { userId: user.id, objectId: { in: trip.items.map((i) => i.objectId) } },
-    select: { objectId: true },
+    where: {
+      userId: user.id,
+      OR: [
+        { objectId: { in: trip.items.flatMap((i) => (i.objectId ? [i.objectId] : [])) } },
+        { eventId: { in: trip.items.flatMap((i) => (i.eventId ? [i.eventId] : [])) } },
+      ],
+    },
+    select: { objectId: true, eventId: true },
   });
-  const stamped = new Set(stamps.map((s) => s.objectId));
+  const stamped = new Set(stamps.map((s) => placeKey(s)));
   const today = new Date(`${hariIniJakarta()}T00:00:00.000Z`);
   const started = trip.startDate <= today;
 
   const days = Math.round((trip.endDate.getTime() - trip.startDate.getTime()) / DAY_MS) + 1;
   const remaining = trip.budget !== null ? Math.max(0, trip.budget - trip.totalIdr) : null;
-  const quotaItems = trip.items
-    .filter((i) => i.object.dailyQuota != null)
-    .map((i) => ({ objectId: i.objectId, name: i.object.name, date: dayString(new Date(trip.startDate.getTime() + i.dayIndex * DAY_MS)) }));
+  const quotaItems = trip.items.flatMap((i) => {
+    const place = placeOf(i);
+    if (place.dailyQuota == null) return [];
+    const date = dayString(new Date(trip.startDate.getTime() + i.dayIndex * DAY_MS));
+    return [i.objectId ? { objectId: i.objectId, name: place.name, date } : { eventId: i.eventId!, name: place.name, date }];
+  });
   const souvenirs = trip.includeSouvenir && remaining ? pickSouvenirs(remaining) : [];
 
   return (
@@ -104,19 +114,21 @@ export default async function TripDetailPage({ params }: { params: { id: string 
                   <ol className="mt-3 space-y-4">
                     {items.map((row) => {
                       const it = row;
+                      const place = placeOf(row);
+                      const key = placeKey(row);
                       return (
                       <li key={it.id} className="rounded-[10px] border border-black bg-white p-4">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                           <div>
                             <p className="text-sm font-semibold text-brand-brown">
                               {slotInfo[it.slot].label} ·{" "}
-                          {it.object.isEvent && it.object.openTime ? it.object.openTime.replace(":", ".") : slotInfo[it.slot].start}
+                          {place.isEvent && place.openTime ? place.openTime.replace(":", ".") : slotInfo[it.slot].start}
                             </p>
-                            <Link href={`/jelajah/${it.object.slug}`} className="text-xl font-semibold hover:underline">
-                              {it.object.name}
+                            <Link href={place.href} className="text-xl font-semibold hover:underline">
+                              {place.name}
                             </Link>
                             <p className="text-sm text-neutral-600">
-                              {kindLabel[it.object.kind]} · {it.object.zone}
+                              {placeKindLabel(place.kind, kindLabel)} · {place.zone}
                             </p>
                           </div>
                           <p className="text-lg font-semibold">{it.priceIdr === 0 ? "Gratis" : formatRupiah(it.priceIdr)}</p>
@@ -132,24 +144,24 @@ export default async function TripDetailPage({ params }: { params: { id: string 
 
                         <details className="mt-3">
                           <summary className="cursor-pointer text-sm font-semibold text-brand-link">Mengapa ini penting & etika berkunjung</summary>
-                          <p className="mt-2 text-sm">{it.object.meaning}</p>
+                          <p className="mt-2 text-sm">{place.meaning}</p>
                           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-                            {it.object.etiquette.map((e) => (
+                            {place.etiquette.map((e) => (
                               <li key={e}>{e}</li>
                             ))}
                           </ul>
-                          {it.object.scheduleNote && <p className="mt-2 text-sm text-amber-800">Jadwal: {it.object.scheduleNote}</p>}
-                          {it.object.weekdays.length > 0 && (
-                            <p className="mt-1 text-sm text-neutral-700">Hari: {it.object.weekdays.map((w) => weekdayNames[w]).join(", ")}</p>
+                          {place.scheduleNote && <p className="mt-2 text-sm text-amber-800">Jadwal: {place.scheduleNote}</p>}
+                          {place.weekdays.length > 0 && (
+                            <p className="mt-1 text-sm text-neutral-700">Hari: {place.weekdays.map((w) => weekdayNames[w]).join(", ")}</p>
                           )}
                           <div className="mt-2">
-                            <StatusBadge status={it.object.status} />
+                            <StatusBadge status={place.status} />
                           </div>
                         </details>
 
-                        {it.object.dailyQuota != null && (
+                        {place.dailyQuota != null && (
                           <VisitRegistration
-                            objectId={it.objectId}
+                            {...(it.objectId ? { objectId: it.objectId } : { eventId: it.eventId! })}
                             defaultDate={dayString(date)}
                             defaultParty={trip.adults + trip.children}
                             minDate={hariIniJakarta()}
@@ -157,10 +169,10 @@ export default async function TripDetailPage({ params }: { params: { id: string 
                         )}
 
                         <div className="mt-3">
-                          {stamped.has(it.objectId) ? (
+                          {stamped.has(key) ? (
                             <span className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-900">✓ Stempel terklaim</span>
                           ) : started ? (
-                            <StampButton objectId={it.objectId} />
+                            <StampButton {...(it.objectId ? { objectId: it.objectId } : { eventId: it.eventId! })} />
                           ) : (
                             <span className="text-xs text-neutral-500">Stempel dapat diklaim mulai hari keberangkatan.</span>
                           )}
