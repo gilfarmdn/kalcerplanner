@@ -44,3 +44,14 @@ export async function uploadObjectPhoto(objectId: string, file: File): Promise<s
   if (!res.ok) throw new Error(json.error ?? "Gagal mengunggah foto");
   return json.imageUrl as string;
 }
+
+/** Mengecilkan lalu mengunggah foto event (ImageAsset). Mengembalikan URL foto, untuk dikirim sebagai imageUrl event. */
+export async function uploadEventPhoto(file: File): Promise<string> {
+  const small = await shrinkImage(file);
+  const form = new FormData();
+  form.append("file", small);
+  const res = await fetch("/api/pelaku/images", { method: "POST", body: form });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error ?? "Gagal mengunggah foto");
+  return json.url as string;
+}
