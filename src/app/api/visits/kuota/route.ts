@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
-import { ACTIVE_VISIT, canCancel, filledOn, openOn } from "@/lib/kuota";
+import { ACTIVE_VISIT, canCancel, eventOpenOn, filledOn, objectOpenOn, type VisitTarget } from "@/lib/kuota";
+import { VISIBLE_STATUSES, visibleEvent } from "@/lib/culture-db";
 import { dayString, toDay, hariIniJakarta } from "@/lib/tanggal";
 import { fail } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Sisa kuota sebuah tempat pada satu tanggal, plus pendaftaran milik pengguna: untuk tanggal itu bila ada,
- * kalau tidak pendaftaran terdekat yang akan datang (atau yang baru dibatalkan pengelola).
+ * Sisa kuota sebuah tempat (destinasi `objectId` atau event mandiri `eventId`) pada satu tanggal, plus pendaftaran
+ * milik pengguna: untuk tanggal itu bila ada, kalau tidak pendaftaran terdekat yang akan datang
+ * (atau yang baru dibatalkan pengelola).
  */
 export async function GET(req: Request) {
   const user = await getUser();
@@ -15,22 +17,40 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const objectId = url.searchParams.get("objectId") ?? "";
+  const eventId = url.searchParams.get("eventId") ?? "";
   const date = url.searchParams.get("date") ?? "";
-  if (!objectId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return fail("Parameter tidak valid");
+  if ((!objectId && !eventId) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return fail("Parameter tidak valid");
 
-  const object = await prisma.culturalObject.findFirst({
-    where: { id: objectId, status: { in: ["VERIFIED", "SEED"] } },
-    select: { id: true, isEvent: true, weekdays: true, dailyQuota: true, events: { where: { isActive: true } } },
-  });
-  if (!object) return fail("Destinasi tidak ditemukan", 404);
+  let target: VisitTarget;
+  let quota: number | null;
+  let open: boolean;
+  if (objectId) {
+    const object = await prisma.culturalObject.findFirst({
+      where: { id: objectId, status: { in: [...VISIBLE_STATUSES] } },
+      select: { id: true, weekdays: true, dailyQuota: true },
+    });
+    if (!object) return fail("Destinasi tidak ditemukan", 404);
+    target = { objectId: object.id };
+    quota = object.dailyQuota;
+    open = objectOpenOn(object, date);
+  } else {
+    const event = await prisma.culturalEvent.findFirst({
+      where: { id: eventId, isActive: true, objectId: null, ...visibleEvent },
+      select: { id: true, dailyQuota: true, startsOn: true, endsOn: true, repeatsYearly: true, weekdays: true, exceptDates: true },
+    });
+    if (!event) return fail("Event tidak ditemukan", 404);
+    target = { eventId: event.id };
+    quota = event.dailyQuota;
+    open = eventOpenOn(event, date);
+  }
 
   const today = toDay(hariIniJakarta());
   const [filled, visits] = await Promise.all([
-    object.dailyQuota === null ? 0 : filledOn(object.id, date),
+    quota === null ? 0 : filledOn(target, date),
     prisma.visit.findMany({
       where: {
         userId: user.id,
-        objectId: object.id,
+        ...(target.objectId ? { objectId: target.objectId } : { eventId: target.eventId }),
         visitDate: { gte: today },
         OR: [{ status: { in: [...ACTIVE_VISIT] } }, { changeNotice: { not: null } }],
       },
@@ -41,9 +61,9 @@ export async function GET(req: Request) {
   const visit = visits.find((v) => dayString(v.visitDate) === date) ?? visits.find((v) => v.status !== "CANCELLED") ?? visits[0] ?? null;
 
   return NextResponse.json({
-    quota: object.dailyQuota,
-    remaining: object.dailyQuota === null ? null : Math.max(0, object.dailyQuota - filled),
-    open: openOn(object, date).open,
+    quota,
+    remaining: quota === null ? null : Math.max(0, quota - filled),
+    open,
     visit: visit && {
       id: visit.id,
       date: dayString(visit.visitDate),
