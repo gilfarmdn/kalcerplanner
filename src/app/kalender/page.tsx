@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import EventCalendar from "@/components/EventCalendar";
 import SiteShell from "@/components/SiteShell";
 import { EVENT_HREF, VISIBLE_STATUSES, plannableEvent, visibleEvent } from "@/lib/culture-db";
-import type { CalEvent, CalShow } from "@/lib/kalender";
+import type { CalEvent } from "@/lib/kalender";
 import { prisma } from "@/lib/prisma";
 import { hariIniJakarta } from "@/lib/tanggal";
 
@@ -12,16 +12,13 @@ export const dynamic = "force-dynamic";
 const ymd = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
 
 export default async function KalenderPage() {
-  const [rawEvents, rawShows, zoneRows] = await Promise.all([
+  // Kalender hanya membaca tabel CulturalEvent. Jadwal rutin (mis. pentas mingguan) disimpan sebagai event berulang
+  // (kolom weekdays) yang terhubung ke objeknya, bukan dihitung dari CulturalObject.
+  const [rawEvents, zoneRows] = await Promise.all([
     prisma.culturalEvent.findMany({
       where: { isActive: true, ...visibleEvent },
       include: { object: { select: { slug: true, name: true, address: true, zone: true } } },
       orderBy: { title: "asc" },
-    }),
-    prisma.culturalObject.findMany({
-      where: { status: { in: [...VISIBLE_STATUSES] }, kind: "PERTUNJUKAN" },
-      orderBy: { name: "asc" },
-      select: { slug: true, name: true, summary: true, scheduleNote: true, address: true, zone: true, weekdays: true },
     }),
     prisma.culturalObject.findMany({
       where: { status: { in: [...VISIBLE_STATUSES] } },
@@ -54,18 +51,6 @@ export default async function KalenderPage() {
     imageUrl: e.imageUrl,
   }));
 
-  // Hanya pertunjukan yang punya hari tampil yang bisa ditempatkan pada tanggal tertentu.
-  const shows: CalShow[] = rawShows
-    .filter((s) => s.weekdays.length > 0)
-    .map((s) => ({
-      slug: s.slug,
-      name: s.name,
-      zone: s.zone,
-      description: [s.summary, s.scheduleNote].filter(Boolean).join(" "),
-      location: s.address ? `${s.name}, ${s.address}` : s.name,
-      weekdays: s.weekdays,
-    }));
-
   return (
     <SiteShell>
       <div className="mx-auto max-w-[1100px] px-4 pb-20 pt-12 sm:px-8">
@@ -74,7 +59,7 @@ export default async function KalenderPage() {
           Pilih tanggal untuk melihat kegiatan budaya yang sedang berlangsung
         </p>
         <div className="mt-8">
-          <EventCalendar events={events} shows={shows} zones={zoneRows.map((r) => r.zone)} today={hariIniJakarta()} />
+          <EventCalendar events={events} zones={zoneRows.map((r) => r.zone)} today={hariIniJakarta()} />
         </div>
       </div>
     </SiteShell>
