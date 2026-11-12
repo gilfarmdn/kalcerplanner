@@ -21,17 +21,23 @@ type KuotaInfo = {
   } | null;
 };
 
-async function fetchKuota(objectId: string, date: string): Promise<KuotaInfo | null> {
-  const res = await fetch(`/api/visits/kuota?objectId=${encodeURIComponent(objectId)}&date=${date}`, { cache: "no-store" });
+/** Tujuan pendaftaran: destinasi (`objectId`) atau event mandiri (`eventId`). */
+export type VisitTargetProps = { objectId: string; eventId?: undefined } | { eventId: string; objectId?: undefined };
+
+const targetKey = (t: VisitTargetProps) => (t.objectId ?? t.eventId)!;
+const targetParam = (t: VisitTargetProps) => (t.objectId ? `objectId=${encodeURIComponent(t.objectId)}` : `eventId=${encodeURIComponent(t.eventId!)}`);
+
+async function fetchKuota(target: VisitTargetProps, date: string): Promise<KuotaInfo | null> {
+  const res = await fetch(`/api/visits/kuota?${targetParam(target)}&date=${date}`, { cache: "no-store" });
   return res.ok ? res.json() : null;
 }
 
-async function postVisit(objectId: string, date: string, partySize: number): Promise<string | null> {
+async function postVisit(target: VisitTargetProps, date: string, partySize: number): Promise<string | null> {
   try {
     const res = await fetch("/api/visits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objectId, visitDate: date, partySize }),
+      body: JSON.stringify({ ...(target.objectId ? { objectId: target.objectId } : { eventId: target.eventId }), visitDate: date, partySize }),
     });
     if (res.ok) return null;
     const json = await res.json().catch(() => ({}));
@@ -49,16 +55,20 @@ const field = "rounded-lg border border-[#2c2c2c] bg-white px-2 py-1.5 text-sm o
  */
 export default function VisitRegistration({
   objectId,
+  eventId,
   defaultDate,
   defaultParty = 1,
   minDate,
 }: {
-  objectId: string;
+  objectId?: string;
+  eventId?: string;
   defaultDate: string;
   defaultParty?: number;
   minDate: string;
 }) {
   const router = useRouter();
+  const target = (objectId ? { objectId } : { eventId: eventId! }) as VisitTargetProps;
+  const key = targetKey(target);
   const [date, setDate] = useState(defaultDate < minDate ? minDate : defaultDate);
   const [party, setParty] = useState(defaultParty);
   const [info, setInfo] = useState<KuotaInfo | null>(null);
@@ -67,8 +77,10 @@ export default function VisitRegistration({
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    fetchKuota(objectId, date).then(setInfo).catch(() => setInfo(null));
-  }, [objectId, date]);
+    fetchKuota(target, date).then(setInfo).catch(() => setInfo(null));
+    // `target` dibentuk ulang tiap render; `key` (id tujuan) yang menentukan perubahan.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, objectId, date]);
 
   useEffect(() => {
     load();
@@ -87,7 +99,7 @@ export default function VisitRegistration({
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const failure = await postVisit(objectId, date, party);
+    const failure = await postVisit(target, date, party);
     setBusy(false);
     if (failure) return setError(failure);
     setFormOpen(false);
@@ -189,7 +201,7 @@ export function RegisterAll({
   defaultParty,
   minDate,
 }: {
-  items: { objectId: string; name: string; date: string }[];
+  items: ({ name: string; date: string } & VisitTargetProps)[];
   defaultParty: number;
   minDate: string;
 }) {
@@ -208,7 +220,7 @@ export function RegisterAll({
     setBusy(true);
     const out: { name: string; error: string | null }[] = [];
     for (const it of pending) {
-      out.push({ name: it.name, error: await postVisit(it.objectId, dates[it.objectId] ?? it.date, party) });
+      out.push({ name: it.name, error: await postVisit(it, dates[targetKey(it)] ?? it.date, party) });
     }
     setResults(out);
     setBusy(false);
@@ -229,14 +241,14 @@ export function RegisterAll({
       <p className="font-semibold">Konfirmasi pendaftaran semua tempat berkuota</p>
       <ul className="space-y-2">
         {pending.map((it) => (
-          <li key={it.objectId} className="flex flex-wrap items-center justify-between gap-2">
+          <li key={targetKey(it)} className="flex flex-wrap items-center justify-between gap-2">
             <span>{it.name}</span>
             <input
               type="date"
               required
               min={minDate}
-              value={dates[it.objectId] ?? it.date}
-              onChange={(e) => setDates({ ...dates, [it.objectId]: e.target.value })}
+              value={dates[targetKey(it)] ?? it.date}
+              onChange={(e) => setDates({ ...dates, [targetKey(it)]: e.target.value })}
               aria-label={`Tanggal kunjungan ${it.name}`}
               className={field}
             />
