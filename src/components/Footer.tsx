@@ -76,7 +76,7 @@ export default function Footer() {
 
       <div className="bg-brand-green">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-1 px-6 py-5 text-sm text-white/90 sm:flex-row sm:items-center sm:justify-between md:px-12 lg:px-[134px]">
-          <p>Copyright {new Date().getFullYear()} - KalcerPlanner.id</p>
+          <p>Copyright {new Date().getFullYear()} - kalcerplanner.com</p>
           <p>Rencanakan perjalanan budaya yang bermakna</p>
         </div>
       </div>
