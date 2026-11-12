@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fail, firstIssue, readBody } from "@/lib/api";
-import { findManageableObject, guardPelaku } from "@/lib/pelaku-api";
+import { findManageableEvent, findManageableObject, guardPelaku } from "@/lib/pelaku-api";
 import { toDay } from "@/lib/tanggal";
 import { visitCreateSchema } from "@/lib/pelaku-validators";
 
@@ -16,18 +16,25 @@ export async function POST(req: Request) {
   if (!parsed.success) return fail(firstIssue(parsed.error));
   const d = parsed.data;
 
-  const object = await findManageableObject(g.user, d.objectId);
-  if (!object) return fail("Destinasi tidak ditemukan", 404);
-
-  if (d.eventId) {
-    const event = await prisma.culturalEvent.findFirst({ where: { id: d.eventId, objectId: object.id }, select: { id: true } });
-    if (!event) return fail("Event tidak sesuai dengan destinasi", 400);
+  // Tujuan: destinasi milik sendiri (eventId = kegiatan pada destinasi itu, opsional) atau event mandiri milik sendiri.
+  let objectId: string | null = null;
+  if (d.objectId) {
+    const object = await findManageableObject(g.user, d.objectId);
+    if (!object) return fail("Destinasi tidak ditemukan", 404);
+    objectId = object.id;
+    if (d.eventId) {
+      const event = await prisma.culturalEvent.findFirst({ where: { id: d.eventId, objectId: object.id }, select: { id: true } });
+      if (!event) return fail("Event tidak sesuai dengan destinasi", 400);
+    }
+  } else {
+    const event = await findManageableEvent(g.user, d.eventId!);
+    if (!event) return fail("Event tidak ditemukan", 404);
   }
 
   try {
     const created = await prisma.visit.create({
       data: {
-        objectId: object.id,
+        objectId,
         eventId: d.eventId ?? null,
         visitorName: d.visitorName,
         contact: d.contact ?? null,
