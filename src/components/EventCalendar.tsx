@@ -49,7 +49,7 @@ export default function EventCalendar({
         zone: e.zone,
         description: e.description,
         location: e.location,
-        href: e.objectSlug ? `/jelajah/${e.objectSlug}` : null,
+        href: e.href !== undefined ? e.href : e.objectSlug ? `/jelajah/${e.objectSlug}` : null,
         tag: null,
         imageUrl: e.imageUrl,
       }));
