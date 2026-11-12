@@ -52,6 +52,14 @@ export default async function ObjectPage({ params }: { params: { slug: string } 
   const plannedDates = planned.map((p) => dayString(new Date(p.trip.startDate.getTime() + p.dayIndex * 86_400_000))).sort();
   const plannedDate = plannedDates.find((d) => d >= today) ?? plannedDates.at(-1) ?? null;
 
+  // Jenis seni pertunjukan: hari dan jam tampil dibaca dari event rutin (CulturalEvent) yang terhubung ke objek ini.
+  const weekly = o.kind === "PERTUNJUKAN" ? o.events.filter((e) => e.weekdays.length > 0) : [];
+  const showDays = [...new Set(weekly.flatMap((e) => e.weekdays))].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+  const showTime = weekly.find((e) => e.openTime && e.closeTime);
+  const days = weekly.length > 0 ? showDays : o.weekdays;
+  const openTime = showTime?.openTime ?? o.openTime;
+  const closeTime = showTime?.closeTime ?? o.closeTime;
+
   const facts: [string, string][] = [
     ["Jenis", kindLabel[o.kind]],
     ["Lokasi", [o.zone, o.address].filter(Boolean).join(" · ")],
@@ -59,8 +67,8 @@ export default async function ObjectPage({ params }: { params: { slug: string } 
     ["Lama kunjungan", `±${o.durationMin} menit`],
     ["Pengalaman", depthInfo[o.depth].label],
     ["Waktu yang cocok", o.slots.map((s) => slotInfo[s].label).join(", ")],
-    ["Hari", o.weekdays.length ? o.weekdays.map((w) => weekdayNames[w]).join(", ") : "Setiap hari (perkiraan)"],
-    ...(o.openTime && o.closeTime ? [["Jam", `${o.openTime}–${o.closeTime} WIB`] as [string, string]] : []),
+    ["Hari", days.length ? days.map((w) => weekdayNames[w]).join(", ") : "Setiap hari (perkiraan)"],
+    ...(openTime && closeTime ? [["Jam", `${openTime}–${closeTime} WIB`] as [string, string]] : []),
   ];
 
   return (
@@ -122,7 +130,10 @@ export default async function ObjectPage({ params }: { params: { slug: string } 
                       )}
                       <div className="min-w-0">
                         <p className="font-semibold">{e.title}</p>
-                        <p className="text-sm text-neutral-700">{e.dateNote}</p>
+                        <p className="text-sm text-neutral-700">
+                          {e.weekdays.length > 0 ? `Setiap ${e.weekdays.map((w) => weekdayNames[w]).join(", ")}` : e.dateNote}
+                          {e.openTime && e.closeTime ? ` · ${e.openTime}–${e.closeTime} WIB` : ""}
+                        </p>
                       </div>
                     </li>
                   ))}
