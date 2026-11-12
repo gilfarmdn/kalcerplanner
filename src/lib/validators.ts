@@ -67,10 +67,13 @@ export const saveTripSchema = z.object({
   input: planInputSchema,
 });
 
-export const stampSchema = z.object({
-  objectId: z.string().min(1).max(40),
-  note: z.string().trim().max(500, "Catatan maksimal 500 karakter").optional(),
-});
+export const stampSchema = z
+  .object({
+    objectId: z.string().min(1).max(40).optional(),
+    eventId: z.string().min(1).max(40).optional(),
+    note: z.string().trim().max(500, "Catatan maksimal 500 karakter").optional(),
+  })
+  .refine((d) => !!d.objectId !== !!d.eventId, { message: "Tujuan stempel tidak valid" });
 
 export const profileSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(80),
@@ -124,15 +127,45 @@ export const objectProposalSchema = z
     openTime: timeOfDay,
     closeTime: timeOfDay,
     scheduleNote: z.string().trim().max(240).optional(),
-    isEvent: z.boolean().default(false),
-    eventStartsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal mulai tidak valid").optional(),
-    eventEndsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal selesai tidak valid").optional(),
-    eventRecurrence: z.enum(["ONCE", "YEARLY", "WEEKLY"]).default("ONCE"),
-    eventWeekdays: z.array(z.number().int().min(0).max(6)).max(7).default([]),
-    eventExceptDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(100).default([]),
     imageUrl: z.string().trim().max(500).optional(),
   })
   .refine((d) => d.closeTime > d.openTime, { message: "Jam tutup harus setelah jam buka", path: ["closeTime"] });
+
+const dayField = (msg: string) => z.string().regex(/^\d{4}-\d{2}-\d{2}$/, msg);
+
+/**
+ * Pelaku mengajukan event budaya (disimpan di tabel CulturalEvent, bukan CulturalObject).
+ * Tetap PENDING (tersembunyi) sampai kurator memverifikasi.
+ */
+export const eventProposalSchema = z
+  .object({
+    title: z.string().trim().min(3, "Nama minimal 3 karakter").max(120),
+    interest: z.enum(INTERESTS),
+    zone: z.string().trim().min(2, "Wilayah minimal 2 karakter").max(60).transform(normalizeZone),
+    address: z.string().trim().max(200).optional(),
+    lat: z.number().min(-90, "Koordinat tidak valid").max(90, "Koordinat tidak valid"),
+    lng: z.number().min(-180, "Koordinat tidak valid").max(180, "Koordinat tidak valid"),
+    summary: z.string().trim().min(20, "Ringkasan minimal 20 karakter").max(240),
+    meaning: z.string().trim().min(40, "Jelaskan makna budaya minimal 40 karakter").max(1200),
+    etiquette: lines(6),
+    priceIdr: z.number().int().min(0).max(5_000_000),
+    childPriceIdr: z.number().int().min(0, "Harga anak tidak valid").max(5_000_000).nullable().optional(),
+    dailyQuota: z.number().int().min(1, "Kuota minimal 1 orang").max(100_000).nullable().optional(),
+    openTime: timeOfDay,
+    closeTime: timeOfDay,
+    scheduleNote: z.string().trim().max(240).optional(),
+    startsOn: dayField("Tanggal mulai tidak valid"),
+    endsOn: dayField("Tanggal selesai tidak valid").optional(),
+    recurrence: z.enum(["ONCE", "YEARLY", "WEEKLY"]).default("ONCE"),
+    weekdays: z.array(z.number().int().min(0).max(6)).max(7).default([]),
+    exceptDates: z.array(dayField("Tanggal pengecualian tidak valid")).max(100).default([]),
+    imageUrl: z.string().trim().max(500).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.closeTime <= d.openTime) ctx.addIssue({ code: "custom", message: "Jam selesai harus setelah jam mulai", path: ["closeTime"] });
+    if (d.recurrence === "WEEKLY" && d.weekdays.length === 0) ctx.addIssue({ code: "custom", message: "Pilih minimal satu hari berlangsung", path: ["weekdays"] });
+    if (d.endsOn && d.endsOn < d.startsOn) ctx.addIssue({ code: "custom", message: "Tanggal selesai tidak boleh sebelum tanggal mulai", path: ["endsOn"] });
+  });
 
 export const verifySchema = z.object({
   action: z.enum(["VERIFY", "REJECT"]),
