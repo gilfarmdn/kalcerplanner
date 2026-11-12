@@ -60,7 +60,7 @@ export type PlannerObject = {
 export type PlannerEvent = {
   slug: string;
   title: string;
-  /** Objek event terkait; catatan kalender dilewati bila objek itu sudah masuk jadwal. */
+  /** Objek / event terkait; catatan kalender dilewati bila itu sudah masuk jadwal. */
   objectSlug?: string | null;
   monthHint: number | null;
   dateNote: string;
@@ -450,7 +450,7 @@ function buildPlan(
   for (let ms = startMs; ms <= endMs; ms += DAY_MS) tripMonths.add(new Date(ms).getUTCMonth() + 1);
   const scheduled = new Set(chosen.map((it) => it.object.slug));
   for (const ev of events) {
-    if (ev.objectSlug && scheduled.has(ev.objectSlug)) continue;
+    if (scheduled.has(ev.slug) || (ev.objectSlug && scheduled.has(ev.objectSlug))) continue;
     const s = ev.startsOn ? new Date(ev.startsOn).getTime() : null;
     const e = ev.endsOn ? new Date(ev.endsOn).getTime() : s;
     if (s !== null && e !== null) {
