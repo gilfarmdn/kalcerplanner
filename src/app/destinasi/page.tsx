@@ -4,7 +4,7 @@ import { Briefcase } from "lucide-react";
 import PageHeading from "@/components/pelaku/PageHeading";
 import StatusPill from "@/components/pelaku/StatusPill";
 import { requirePractitioner } from "@/lib/auth";
-import { ownedObjectWhere } from "@/lib/pelaku-api";
+import { ownedEventWhere, ownedObjectWhere, ownedVisitWhere } from "@/lib/pelaku-api";
 import { toDay, hariIniJakarta } from "@/lib/tanggal";
 import { prisma } from "@/lib/prisma";
 
@@ -16,19 +16,26 @@ export default async function PelakuHomePage() {
   const owned = ownedObjectWhere(user);
   const today = toDay(hariIniJakarta());
 
-  const [destinations, todayVisits, activeEvents] = await Promise.all([
+  const [destinations, events, todayVisits, activeChildEvents] = await Promise.all([
     prisma.culturalObject.findMany({
       where: owned,
       orderBy: { createdAt: "desc" },
-      select: { id: true, slug: true, name: true, zone: true, status: true, imageUrl: true, isEvent: true },
+      select: { id: true, slug: true, name: true, zone: true, status: true, imageUrl: true },
+    }),
+    // Event budaya mandiri (tabel CulturalEvent), terpisah dari destinasi.
+    prisma.culturalEvent.findMany({
+      where: ownedEventWhere(user),
+      orderBy: { createdAt: "desc" },
+      select: { id: true, slug: true, title: true, zone: true, status: true, imageUrl: true, isActive: true },
     }),
     prisma.visit.aggregate({
-      where: { object: owned, visitDate: today, status: { not: "CANCELLED" } },
+      where: { ...ownedVisitWhere(user), visitDate: today, status: { not: "CANCELLED" } },
       _sum: { partySize: true },
       _count: true,
     }),
     prisma.culturalEvent.count({ where: { object: owned, isActive: true } }),
   ]);
+  const activeEvents = events.filter((e) => e.isActive).length + activeChildEvents;
 
   return (
     <>
@@ -43,13 +50,18 @@ export default async function PelakuHomePage() {
       </Link>
 
       <dl className="mt-6 grid max-w-[640px] grid-cols-3 gap-3 sm:ml-4">
-        <Stat label="Destinasi" value={destinations.filter((d) => !d.isEvent).length} />
+        <Stat label="Destinasi" value={destinations.length} />
         <Stat label="Event aktif" value={activeEvents} />
         <Stat label="Pengunjung hari ini" value={todayVisits._sum.partySize ?? 0} href="/destinasi/kunjungan" />
       </dl>
 
-      <Section title="Destinasi Wisata" items={destinations.filter((d) => !d.isEvent)} empty="Belum ada destinasi. Klik “Tambah Destinasi Wisata” untuk memulai." />
-      <Section title="Event Budaya" items={destinations.filter((d) => d.isEvent)} empty="Belum ada event. Pilih “Event Budaya” saat menambah." />
+      <Section title="Destinasi Wisata" items={destinations} basePath="/destinasi" empty="Belum ada destinasi. Klik “Tambah Destinasi Wisata” untuk memulai." />
+      <Section
+        title="Event Budaya"
+        items={events.map((e) => ({ id: e.id, slug: e.slug, name: e.title, zone: e.zone ?? "", status: e.status, imageUrl: e.imageUrl }))}
+        basePath="/destinasi/event"
+        empty="Belum ada event. Pilih “Event Budaya” saat menambah."
+      />
     </>
   );
 }
@@ -63,7 +75,7 @@ type DestinationItem = {
   imageUrl: string | null;
 };
 
-function Section({ title, items, empty }: { title: string; items: DestinationItem[]; empty: string }) {
+function Section({ title, items, empty, basePath }: { title: string; items: DestinationItem[]; empty: string; basePath: string }) {
   return (
     <>
       <h2 className="mb-5 mt-10 text-lg font-semibold sm:ml-4">{title}</h2>
@@ -81,7 +93,7 @@ function Section({ title, items, empty }: { title: string; items: DestinationIte
                   <span>{d.zone}</span>
                   <StatusPill status={d.status} />
                 </div>
-                <Link href={`/destinasi/${d.id}`} className="self-end text-[11px] text-brand-link underline">
+                <Link href={`${basePath}/${d.id}`} className="self-end text-[11px] text-brand-link underline">
                   Lihat Detail
                 </Link>
               </div>
