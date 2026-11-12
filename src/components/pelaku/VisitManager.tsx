@@ -6,7 +6,7 @@ import { VISIT_STATUSES, visitStatusLabel } from "@/lib/pelaku-validators";
 
 export type VisitRow = {
   id: string;
-  objectId: string;
+  objectId: string | null;
   objectName: string;
   eventId: string | null;
   eventTitle: string | null;
@@ -19,7 +19,8 @@ export type VisitRow = {
   note: string;
 };
 
-type Option = { id: string; name: string };
+/** Tujuan kunjungan: destinasi ("o:<id>") atau event mandiri ("e:<id>"). */
+type Option = { value: string; label: string };
 type EventOption = { id: string; title: string; objectId: string };
 
 const input = "w-full rounded-lg border border-[#2c2c2c] bg-white px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-link";
@@ -35,13 +36,13 @@ const showDate = (d: string) => dateFmt.format(new Date(`${d}T00:00:00Z`));
 /** Daftar kunjungan + tambah tamu walk-in, ubah, tandai hadir/batal, hapus. */
 export default function VisitManager({
   rows,
-  objects,
+  targets,
   events,
   defaultDate,
   exportHref,
 }: {
   rows: VisitRow[];
-  objects: Option[];
+  targets: Option[];
   events: EventOption[];
   defaultDate: string;
   exportHref: string;
@@ -49,7 +50,7 @@ export default function VisitManager({
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [addObject, setAddObject] = useState(objects[0]?.id ?? "");
+  const [addTarget, setAddTarget] = useState(targets[0]?.value ?? "");
   const [editId, setEditId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,9 +81,10 @@ export default function VisitManager({
   async function add(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    const target = String(f.get("target") ?? "");
+    const id = target.slice(2);
     const ok = await call("/api/pelaku/visits", "POST", {
-      objectId: f.get("objectId"),
-      eventId: f.get("eventId") || null,
+      ...(target.startsWith("e:") ? { eventId: id } : { objectId: id, eventId: f.get("eventId") || null }),
       visitorName: f.get("visitorName"),
       contact: f.get("contact") || undefined,
       partySize: Number(f.get("partySize")),
@@ -116,7 +118,7 @@ export default function VisitManager({
     await call(`/api/pelaku/visits/${row.id}`, "DELETE", undefined, row.id);
   }
 
-  const addEvents = events.filter((ev) => ev.objectId === addObject);
+  const addEvents = addTarget.startsWith("o:") ? events.filter((ev) => ev.objectId === addTarget.slice(2)) : [];
 
   return (
     <div className="max-w-5xl">
@@ -132,17 +134,17 @@ export default function VisitManager({
       {adding && (
         <form onSubmit={add} className="mb-6 grid gap-3 rounded-lg border border-neutral-300 p-4 sm:grid-cols-2 lg:grid-cols-3">
           <label className="text-xs font-medium">
-            Destinasi
-            <select name="objectId" value={addObject} onChange={(e) => setAddObject(e.target.value)} className={`${input} select-arrow mt-1`}>
-              {objects.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
+            Destinasi / event
+            <select name="target" value={addTarget} onChange={(e) => setAddTarget(e.target.value)} className={`${input} select-arrow mt-1`}>
+              {targets.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </label>
           <label className="text-xs font-medium">
-            Event (opsional)
-            <select name="eventId" defaultValue="" key={addObject} className={`${input} select-arrow mt-1`}>
-              <option value="">Tanpa event</option>
+            Kegiatan (opsional)
+            <select name="eventId" defaultValue="" key={addTarget} disabled={addEvents.length === 0} className={`${input} select-arrow mt-1`}>
+              <option value="">Tanpa kegiatan</option>
               {addEvents.map((ev) => (
                 <option key={ev.id} value={ev.id}>{ev.title}</option>
               ))}
