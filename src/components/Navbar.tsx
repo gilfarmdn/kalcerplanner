@@ -115,14 +115,14 @@ export default function Navbar({ user }: { user: { name: string; role?: Role; av
           ))}
         </ul>
 
-        <div className="hidden shrink-0 items-center gap-4 lg:flex xl:gap-6">
+        {/* <div className="hidden shrink-0 items-center gap-4 lg:flex xl:gap-6">
           {authButton}
           <button type="button" className="inline-flex items-center gap-1.5 text-base font-semibold xl:text-lg" aria-label="Pilih bahasa">
             <Globe size={22} />
             IDN
             <ChevronDown size={20} />
           </button>
-        </div>
+        </div> */}
 
         <button
           type="button"
