@@ -53,7 +53,8 @@ export async function POST(req: Request) {
         items: {
           create: plan.days.flatMap((day) =>
             day.items.map((it) => ({
-              objectId: it.object.id,
+              // Event mandiri disimpan lewat eventId, destinasi lewat objectId.
+              ...(it.object.isEvent ? { eventId: it.object.id } : { objectId: it.object.id }),
               dayIndex: day.dayIndex,
               slot: it.slot,
               sortOrder: order++,
