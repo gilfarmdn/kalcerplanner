@@ -9,6 +9,8 @@ import { formatRupiah } from "@/lib/culture";
 export type JelajahItem = {
   id: string;
   slug: string;
+  /** Tautan halaman detail (destinasi: /jelajah/<slug>, event: /jelajah/event/<slug>). */
+  href: string;
   name: string;
   zone: string;
   summary: string;
@@ -21,7 +23,7 @@ export type JelajahItem = {
 function ObjectCard({ o }: { o: JelajahItem }) {
   return (
     <Link
-      href={`/jelajah/${o.slug}`}
+      href={o.href}
       className="group relative block h-[350px] overflow-hidden shadow-[0_4px_4px_rgba(0,0,0,0.25)]"
     >
       <Image
