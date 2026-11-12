@@ -15,6 +15,19 @@ export function findManageableObject(user: CurrentUser, id: string) {
   return prisma.culturalObject.findFirst({ where: { id, ...ownedObjectWhere(user) } });
 }
 
+/** Event mandiri milik pelaku (bukan catatan kegiatan pada destinasi). */
+export const ownedEventWhere = (user: CurrentUser) => ({ ownerId: user.id, objectId: null });
+
+/** Event mandiri yang boleh dikelola user ini, atau null. */
+export function findManageableEvent(user: CurrentUser, id: string) {
+  return prisma.culturalEvent.findFirst({ where: { id, ...ownedEventWhere(user) } });
+}
+
+/** Kunjungan ke destinasi atau event mandiri milik user. */
+export const ownedVisitWhere = (user: CurrentUser) => ({
+  OR: [{ object: ownedObjectWhere(user) }, { event: ownedEventWhere(user) }],
+});
+
 export function eventScheduleData(d: {
   startsOn: string;
   endsOn?: string;
