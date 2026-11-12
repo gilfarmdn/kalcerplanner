@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import EventCalendar from "@/components/EventCalendar";
 import SiteShell from "@/components/SiteShell";
-import { VISIBLE_STATUSES, visibleEvent } from "@/lib/culture-db";
+import { EVENT_HREF, VISIBLE_STATUSES, plannableEvent, visibleEvent } from "@/lib/culture-db";
 import type { CalEvent, CalShow } from "@/lib/kalender";
 import { prisma } from "@/lib/prisma";
 import { hariIniJakarta } from "@/lib/tanggal";
@@ -19,7 +19,7 @@ export default async function KalenderPage() {
       orderBy: { title: "asc" },
     }),
     prisma.culturalObject.findMany({
-      where: { status: { in: [...VISIBLE_STATUSES] }, kind: "PERTUNJUKAN", isEvent: false },
+      where: { status: { in: [...VISIBLE_STATUSES] }, kind: "PERTUNJUKAN" },
       orderBy: { name: "asc" },
       select: { slug: true, name: true, summary: true, scheduleNote: true, address: true, zone: true, weekdays: true },
     }),
@@ -30,6 +30,9 @@ export default async function KalenderPage() {
       orderBy: { zone: "asc" },
     }),
   ]);
+  const standalone = new Set(
+    (await prisma.culturalEvent.findMany({ where: plannableEvent, select: { id: true } })).map((e) => e.id),
+  );
 
   const events: CalEvent[] = rawEvents.map((e) => ({
     id: e.id,
@@ -37,8 +40,10 @@ export default async function KalenderPage() {
     zone: e.zone ?? e.object?.zone ?? "",
     description: e.description,
     // Lokasi: isian khusus event bila ada, kalau tidak nama + alamat objek terkait.
-    location: e.venue ?? (e.object ? [e.object.name, e.object.address].filter(Boolean).join(", ") : null),
+    location: e.venue ?? e.address ?? (e.object ? [e.object.name, e.object.address].filter(Boolean).join(", ") : null),
     objectSlug: e.object?.slug ?? null,
+    // Event mandiri punya halaman detail sendiri; catatan kalender menautkan ke destinasinya (bila ada).
+    href: standalone.has(e.id) ? EVENT_HREF(e.slug) : e.object?.slug ? `/jelajah/${e.object.slug}` : null,
     startsOn: ymd(e.startsOn),
     endsOn: ymd(e.endsOn),
     repeatsYearly: e.repeatsYearly,
