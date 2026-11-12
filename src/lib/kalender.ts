@@ -19,16 +19,6 @@ export type CalEvent = {
   imageUrl: string | null;
 };
 
-/** Pertunjukan rutin mingguan (objek budaya jenis pertunjukan yang punya hari tampil). */
-export type CalShow = {
-  slug: string;
-  name: string;
-  zone: string;
-  description: string;
-  location: string | null;
-  weekdays: number[]; // 0 = Minggu ... 6 = Sabtu
-};
-
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** month = 0..11 */
@@ -65,4 +55,3 @@ export function eventOccursOn(e: EventSchedule, ymd: string): boolean {
   return s <= f ? md >= s && md <= f : md >= s || md <= f; // rentang yang melewati pergantian tahun
 }
 
-export const showOccursOn = (s: CalShow, ymd: string) => s.weekdays.includes(weekdayOf(ymd));
