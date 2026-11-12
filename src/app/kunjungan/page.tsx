@@ -36,7 +36,7 @@ export default async function KunjunganPage() {
       status: true,
       changeNotice: true,
       object: { select: { name: true, slug: true, zone: true, openTime: true, closeTime: true, status: true } },
-      event: { select: { title: true } },
+      event: { select: { title: true, slug: true, zone: true, openTime: true, closeTime: true, status: true } },
     },
   });
 
@@ -46,23 +46,27 @@ export default async function KunjunganPage() {
 
   const card = (v: (typeof rows)[number], withCancel: boolean) => {
     const s = statusInfo[v.status];
-    const listed = v.object.status === "VERIFIED" || v.object.status === "SEED";
+    // Kunjungan ke destinasi (boleh dengan kegiatan di dalamnya) atau ke event mandiri.
+    const place = v.object
+      ? { name: v.object.name, href: `/jelajah/${v.object.slug}`, zone: v.object.zone, openTime: v.object.openTime, closeTime: v.object.closeTime, status: v.object.status, activity: v.event?.title ?? null }
+      : { name: v.event?.title ?? "Tempat tidak tersedia", href: v.event ? `/jelajah/event/${v.event.slug}` : "", zone: v.event?.zone ?? "", openTime: v.event?.openTime ?? null, closeTime: v.event?.closeTime ?? null, status: v.event?.status ?? "HIDDEN", activity: null };
+    const listed = !!place.href && (place.status === "VERIFIED" || place.status === "SEED");
     return (
       <li key={v.id} className="rounded-[10px] border border-black bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-brand-brown">{formatHariPanjang(v.date)}</p>
             {listed ? (
-              <Link href={`/jelajah/${v.object.slug}`} className="text-xl font-semibold hover:underline">
-                {v.object.name}
+              <Link href={place.href} className="text-xl font-semibold hover:underline">
+                {place.name}
               </Link>
             ) : (
-              <p className="text-xl font-semibold">{v.object.name}</p>
+              <p className="text-xl font-semibold">{place.name}</p>
             )}
             <p className="text-sm text-neutral-600">
-              {v.event ? `${v.event.title} · ` : ""}
-              {v.object.zone}
-              {v.object.openTime && v.object.closeTime ? ` · ${v.object.openTime}–${v.object.closeTime} WIB` : ""} · {v.partySize} orang
+              {place.activity ? `${place.activity} · ` : ""}
+              {place.zone}
+              {place.openTime && place.closeTime ? ` · ${place.openTime}–${place.closeTime} WIB` : ""} · {v.partySize} orang
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
