@@ -42,6 +42,10 @@ export type SeedEvent = {
   startsOn?: string;
   endsOn?: string;
   repeatsYearly?: boolean;
+  /** Jadwal rutin mingguan (0 = Minggu ... 6 = Sabtu); event berulang tiap pekan mulai `startsOn`. */
+  weekdays?: number[];
+  openTime?: string;
+  closeTime?: string;
   venue?: string;
 };
 
@@ -681,6 +685,18 @@ export const yogyakartaObjects: SeedObject[] = [
 ];
 
 export const yogyakartaEvents: SeedEvent[] = [
+  {
+    // Pertunjukan rutin: tampil di Kalender Budaya lewat tabel event (bukan dihitung dari objek).
+    slug: "ramayana-prambanan-rutin",
+    title: "Sendratari Ramayana Prambanan (panggung terbuka)",
+    description: "Pentas sendratari Ramayana dengan latar candi, biasanya beberapa malam per pekan. Cek jadwal resmi pengelola.",
+    interest: "SENI_PERTUNJUKAN",
+    zone: "Yogyakarta",
+    objectSlug: "ramayana-prambanan",
+    dateNote: "Rutin mingguan",
+    startsOn: "2026-01-01",
+    weekdays: [2, 4, 6],
+  },
   {
     slug: "sekaten",
     title: "Sekaten & Grebeg Mulud",
