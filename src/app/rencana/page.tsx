@@ -3,7 +3,7 @@ import RencanaBuilder, { type RencanaInitial } from "@/components/RencanaBuilder
 import SiteShell from "@/components/SiteShell";
 import { getUser } from "@/lib/auth";
 import { INTERESTS, isInterest, type Interest } from "@/lib/culture";
-import { VISIBLE_STATUSES } from "@/lib/culture-db";
+import { VISIBLE_STATUSES, plannableEvent } from "@/lib/culture-db";
 import { prisma } from "@/lib/prisma";
 
 export const generateMetadata = (): Metadata => ({ title: "Rencana — KalcerPlanner" });
@@ -28,13 +28,18 @@ export default async function RencanaPage({ searchParams }: { searchParams: SP }
   const user = await getUser();
 
   // Pilihan wilayah tujuan diambil dari database (nilai `zone` objek yang tampil), jadi selalu cocok dengan data.
-  const zoneRows = await prisma.culturalObject.findMany({
-    where: { status: { in: [...VISIBLE_STATUSES] } },
-    distinct: ["zone"],
-    select: { zone: true },
-    orderBy: { zone: "asc" },
-  });
-  const zones = zoneRows.map((r) => r.zone);
+  const [zoneRows, eventZoneRows] = await Promise.all([
+    prisma.culturalObject.findMany({
+      where: { status: { in: [...VISIBLE_STATUSES] } },
+      distinct: ["zone"],
+      select: { zone: true },
+    }),
+    // Event mandiri juga bisa masuk rencana, jadi wilayahnya ikut jadi pilihan.
+    prisma.culturalEvent.findMany({ where: plannableEvent, distinct: ["zone"], select: { zone: true } }),
+  ]);
+  const zones = [...new Set([...zoneRows.map((r) => r.zone), ...eventZoneRows.flatMap((r) => (r.zone ? [r.zone] : []))])].sort((a, b) =>
+    a.localeCompare(b, "id"),
+  );
 
   // Values can come from the homepage "RENCANA" box (via ?query) — sanitise before use.
   const initial: RencanaInitial = {
