@@ -115,14 +115,14 @@ export default function Navbar({ user }: { user: { name: string; role?: Role; av
           ))}
         </ul>
 
-        {/* <div className="hidden shrink-0 items-center gap-4 lg:flex xl:gap-6">
+        <div className="hidden shrink-0 items-center gap-4 lg:flex xl:gap-6">
           {authButton}
-          <button type="button" className="inline-flex items-center gap-1.5 text-base font-semibold xl:text-lg" aria-label="Pilih bahasa">
+          {/*  <button type="button" className="inline-flex items-center gap-1.5 text-base font-semibold xl:text-lg" aria-label="Pilih bahasa">
             <Globe size={22} />
             IDN
             <ChevronDown size={20} />
-          </button>
-        </div> */}
+          </button> */}
+        </div>
 
         <button
           type="button"
@@ -150,12 +150,12 @@ export default function Navbar({ user }: { user: { name: string; role?: Role; av
               </li>
             ))}
           </ul>
-          {/* <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             {authButton}
-            <span className="inline-flex items-center gap-2 text-lg font-semibold">
+            {/* <span className="inline-flex items-center gap-2 text-lg font-semibold">
               <Globe size={20} /> IDN
-            </span>
-          </div> */}
+            </span> */}
+          </div>
         </div>
       )}
     </header>
