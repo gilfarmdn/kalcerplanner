@@ -3,7 +3,7 @@ import Image from "next/image";
 import InterestSection, { type JelajahItem } from "@/components/InterestSection";
 import SiteShell from "@/components/SiteShell";
 import { INTERESTS, interestInfo } from "@/lib/culture";
-import { objectImage, VISIBLE_STATUSES } from "@/lib/culture-db";
+import { EVENT_HREF, objectImage, plannableEvent, VISIBLE_STATUSES } from "@/lib/culture-db";
 import { prisma } from "@/lib/prisma";
 
 export const generateMetadata = (): Metadata => ({ title: "Jelajah — KalcerPlanner" });
@@ -23,12 +23,35 @@ function pickRandom<T>(list: T[], n: number): T[] {
 }
 
 export default async function JelajahPage() {
-  const rows = await prisma.culturalObject.findMany({
-    where: { status: { in: [...VISIBLE_STATUSES] } },
-    orderBy: { name: "asc" },
-    select: { id: true, slug: true, name: true, zone: true, summary: true, priceIdr: true, interest: true, imageUrl: true, hiddenGem: true, isEvent: true },
-  });
-  const objects = rows;
+  const [rows, eventRows] = await Promise.all([
+    prisma.culturalObject.findMany({
+      where: { status: { in: [...VISIBLE_STATUSES] } },
+      orderBy: { name: "asc" },
+      select: { id: true, slug: true, name: true, zone: true, summary: true, priceIdr: true, interest: true, imageUrl: true, hiddenGem: true },
+    }),
+    // Event mandiri (tabel CulturalEvent) tampil berdampingan dengan destinasi, dengan label "Event".
+    prisma.culturalEvent.findMany({
+      where: plannableEvent,
+      orderBy: { title: "asc" },
+      select: { id: true, slug: true, title: true, zone: true, description: true, priceIdr: true, interest: true, imageUrl: true, hiddenGem: true },
+    }),
+  ]);
+  const objects = [
+    ...rows.map((o) => ({ ...o, interest: o.interest, isEvent: false, href: `/jelajah/${o.slug}` })),
+    ...eventRows.map((e) => ({
+      id: e.id,
+      slug: e.slug,
+      name: e.title,
+      zone: e.zone ?? "",
+      summary: e.description,
+      priceIdr: e.priceIdr,
+      interest: e.interest!,
+      imageUrl: e.imageUrl,
+      hiddenGem: e.hiddenGem,
+      isEvent: true,
+      href: EVENT_HREF(e.slug),
+    })),
+  ].sort((a, b) => a.name.localeCompare(b.name, "id"));
 
   return (
     <SiteShell>
@@ -51,6 +74,7 @@ export default async function JelajahPage() {
           const all: JelajahItem[] = items.map((o) => ({
             id: o.id,
             slug: o.slug,
+            href: o.href,
             name: o.name,
             zone: o.zone,
             summary: o.summary,
