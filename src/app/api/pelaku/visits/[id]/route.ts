@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fail, firstIssue, readBody } from "@/lib/api";
-import { guardPelaku, ownedObjectWhere } from "@/lib/pelaku-api";
+import { guardPelaku, ownedVisitWhere } from "@/lib/pelaku-api";
 import { toDay } from "@/lib/tanggal";
 import { visitUpdateSchema } from "@/lib/pelaku-validators";
 import { noticeVisits, upcomingVisits } from "@/lib/kuota";
 
-const findVisit = (user: Parameters<typeof ownedObjectWhere>[0], id: string) =>
-  prisma.visit.findFirst({ where: { id, object: ownedObjectWhere(user) }, select: { id: true, objectId: true, status: true, userId: true } });
+const findVisit = (user: Parameters<typeof ownedVisitWhere>[0], id: string) =>
+  prisma.visit.findFirst({ where: { id, ...ownedVisitWhere(user) }, select: { id: true, objectId: true, status: true, userId: true } });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const g = await guardPelaku();
@@ -23,6 +23,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!parsed.success) return fail(firstIssue(parsed.error));
   const d = parsed.data;
 
+  // Kunjungan ke event mandiri selalu menunjuk event itu; hanya kunjungan destinasi yang boleh ditandai kegiatan lain.
+  if (d.eventId !== undefined && !existing.objectId) return fail("Event pada kunjungan ini tidak bisa diubah", 400);
   if (d.eventId) {
     const event = await prisma.culturalEvent.findFirst({ where: { id: d.eventId, objectId: existing.objectId }, select: { id: true } });
     if (!event) return fail("Event tidak sesuai dengan destinasi", 400);
