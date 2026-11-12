@@ -16,12 +16,13 @@ export async function POST(req: Request) {
   if (body === null) return fail("Body tidak valid");
   const parsed = stampSchema.safeParse(body);
   if (!parsed.success) return fail(firstIssue(parsed.error));
-  const { objectId, note } = parsed.data;
+  const { objectId, eventId, note } = parsed.data;
+  const tripTarget = objectId ? { objectId } : { eventId };
 
   try {
     const today = new Date(`${todayJakarta()}T00:00:00.000Z`);
     const item = await prisma.tripItem.findFirst({
-      where: { objectId, trip: { userId: g.user.id, startDate: { lte: today } } },
+      where: { ...tripTarget, trip: { userId: g.user.id, startDate: { lte: today } } },
       select: { tripId: true },
       orderBy: { trip: { startDate: "desc" } },
     });
@@ -30,9 +31,11 @@ export async function POST(req: Request) {
     }
 
     const stamp = await prisma.stamp.upsert({
-      where: { userId_objectId: { userId: g.user.id, objectId } },
+      where: objectId
+        ? { userId_objectId: { userId: g.user.id, objectId } }
+        : { userId_eventId: { userId: g.user.id, eventId: eventId! } },
       update: { note: note ?? null },
-      create: { userId: g.user.id, objectId, tripId: item.tripId, note: note ?? null },
+      create: { userId: g.user.id, ...tripTarget, tripId: item.tripId, note: note ?? null },
       select: { id: true },
     });
     return NextResponse.json({ id: stamp.id }, { status: 201 });
