@@ -48,11 +48,19 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   if (!user.deactivatedAt) return fail("Nonaktifkan akun terlebih dahulu sebelum menghapus", 409);
 
   try {
-    const owned = await prisma.culturalObject.findMany({ where: { ownerId: user.id }, select: { id: true } });
+    const [owned, ownedEvents] = await Promise.all([
+      prisma.culturalObject.findMany({ where: { ownerId: user.id }, select: { id: true } }),
+      prisma.culturalEvent.findMany({ where: { ownerId: user.id, objectId: null }, select: { id: true } }),
+    ]);
     if (owned.length > 0) {
       const ids = owned.map((o) => o.id);
       await prisma.culturalObject.updateMany({ where: { id: { in: ids } }, data: { status: "HIDDEN", verifiedAt: null } });
       await noticeVisits(await upcomingVisits({ objectId: { in: ids } }), "Tempat ini tidak lagi tersedia di KalcerPlanner.", true);
+    }
+    if (ownedEvents.length > 0) {
+      const ids = ownedEvents.map((e) => e.id);
+      await prisma.culturalEvent.updateMany({ where: { id: { in: ids } }, data: { status: "HIDDEN", verifiedAt: null } });
+      await noticeVisits(await upcomingVisits({ eventId: { in: ids } }), "Event ini tidak lagi tersedia di KalcerPlanner.", true);
     }
 
     await prisma.$transaction([
