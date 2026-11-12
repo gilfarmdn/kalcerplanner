@@ -12,7 +12,7 @@ cp .env.example .env        # lalu ubah POSTGRES_PASSWORD dan AUTH_SECRET (wajib
 docker compose up --build
 ```
 
-Buka http://localhost:3000. Compose menjalankan PostgreSQL, job `migrate` satu kali (membuat tabel + seed data Yogyakarta), lalu aplikasi.
+Buka http://localhost:3000. Compose menjalankan PostgreSQL, job `migrate` satu kali (membuat tabel; data sampel Yogyakarta hanya dibuat bila `SEED_SAMPLE_DATA=true`), lalu aplikasi.
 
 - **Akun kurator (opsional):** isi `ADMIN_EMAIL` dan `ADMIN_PASSWORD` di `.env` sebelum `docker compose up`. Seed membuat akun ADMIN yang bisa memverifikasi pengajuan di `/admin`.
 - **Upgrade dari versi sebelumnya:** skema berubah besar (tabel `TripRequest` dan `Partner` dihapus). Jalankan sekali `docker compose down -v` lalu `docker compose up --build` agar database dibuat ulang. Data lama (akun, rencana lama) ikut terhapus.
@@ -25,7 +25,7 @@ cp .env.example .env
 docker compose up -d db
 npm install                 # juga menjalankan `prisma generate`
 npm run db:push             # buat tabel
-npm run db:seed             # data budaya Yogyakarta + konten landing
+npm run db:seed             # akun kurator; tambahkan SEED_SAMPLE_DATA=true untuk data sampel Yogyakarta
 npm run dev
 npm run check:planner       # uji mesin rekomendasi (tanpa database)
 ```
