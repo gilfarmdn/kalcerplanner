@@ -3,7 +3,7 @@ import PageHeading from "@/components/pelaku/PageHeading";
 import VisitManager, { type VisitRow } from "@/components/pelaku/VisitManager";
 import { requirePractitioner } from "@/lib/auth";
 import { dayString, hariIniJakarta } from "@/lib/tanggal";
-import { ownedObjectWhere } from "@/lib/pelaku-api";
+import { ownedEventWhere, ownedObjectWhere } from "@/lib/pelaku-api";
 import { visitWhere } from "@/lib/pelaku-visits";
 import { VISIT_STATUSES, visitStatusLabel } from "@/lib/pelaku-validators";
 import { prisma } from "@/lib/prisma";
@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 export const metadata: Metadata = { title: "Riwayat Kunjungan — KalcerPlanner" };
 export const dynamic = "force-dynamic";
 
-type SP = { from?: string; to?: string; objectId?: string; status?: string; q?: string };
+type SP = { from?: string; to?: string; objectId?: string; eventId?: string; status?: string; q?: string };
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function KunjunganPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
@@ -23,7 +23,13 @@ export default async function KunjunganPage({ searchParams }: { searchParams: Re
   const sp: SP = {
     from: hasDateParams ? one(searchParams.from) : today,
     to: hasDateParams ? one(searchParams.to) : today,
-    objectId: one(searchParams.objectId),
+    // Pilihan "Destinasi / event": nilai "o:<id>" atau "e:<id>". `objectId` lama (tautan dari halaman detail) tetap dikenali.
+    ...(() => {
+      const pick = one(searchParams.tujuan);
+      if (pick?.startsWith("o:")) return { objectId: pick.slice(2) };
+      if (pick?.startsWith("e:")) return { eventId: pick.slice(2) };
+      return { objectId: one(searchParams.objectId), eventId: one(searchParams.eventId) };
+    })(),
     status: one(searchParams.status),
     q: one(searchParams.q),
   };
@@ -31,7 +37,7 @@ export default async function KunjunganPage({ searchParams }: { searchParams: Re
   const [objects, events, visits] = await Promise.all([
     prisma.culturalObject.findMany({ where: ownedObjectWhere(user), orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.culturalEvent.findMany({
-      where: { object: ownedObjectWhere(user) },
+      where: { OR: [{ object: ownedObjectWhere(user) }, ownedEventWhere(user)] },
       orderBy: { title: "asc" },
       select: { id: true, title: true, objectId: true },
     }),
@@ -43,13 +49,19 @@ export default async function KunjunganPage({ searchParams }: { searchParams: Re
     }),
   ]);
 
+  // Kegiatan pada destinasi (punya objectId) = pilihan "kegiatan" di bawah destinasinya; event mandiri = tujuan tersendiri.
   const eventOptions = events.flatMap((e) => (e.objectId ? [{ id: e.id, title: e.title, objectId: e.objectId }] : []));
+  const targets = [
+    ...objects.map((o) => ({ value: `o:${o.id}`, label: o.name })),
+    ...events.filter((e) => !e.objectId).map((e) => ({ value: `e:${e.id}`, label: `${e.title} (event)` })),
+  ];
+  const selectedTarget = sp.objectId ? `o:${sp.objectId}` : sp.eventId ? `e:${sp.eventId}` : "";
   const rows: VisitRow[] = visits.map((v) => ({
     id: v.id,
     objectId: v.objectId,
-    objectName: v.object.name,
+    objectName: v.object?.name ?? v.event?.title ?? "-",
     eventId: v.eventId,
-    eventTitle: v.event?.title ?? null,
+    eventTitle: v.object ? (v.event?.title ?? null) : null,
     visitorName: v.visitorName,
     contact: v.contact ?? "",
     partySize: v.partySize,
@@ -70,8 +82,8 @@ export default async function KunjunganPage({ searchParams }: { searchParams: Re
     <>
       <PageHeading title="Riwayat Kunjungan" />
 
-      {objects.length === 0 ? (
-        <p className="text-neutral-700">Tambahkan destinasi terlebih dahulu agar kunjungan bisa dicatat.</p>
+      {targets.length === 0 ? (
+        <p className="text-neutral-700">Tambahkan destinasi atau event terlebih dahulu agar kunjungan bisa dicatat.</p>
       ) : (
         <>
           <form method="get" className="mb-6 grid max-w-4xl gap-3 rounded-lg border border-neutral-300 p-4 sm:grid-cols-2 lg:grid-cols-6">
@@ -84,11 +96,11 @@ export default async function KunjunganPage({ searchParams }: { searchParams: Re
               <input name="to" type="date" defaultValue={sp.to ?? ""} className="mt-1 w-full rounded-lg border border-[#2c2c2c] px-2 py-1.5 text-sm" />
             </label>
             <label className="text-xs font-medium">
-              Destinasi
-              <select name="objectId" defaultValue={sp.objectId ?? ""} className="mt-1 select-arrow w-full rounded-lg border border-[#2c2c2c] px-2 py-1.5 text-sm">
+              Destinasi / event
+              <select name="tujuan" defaultValue={selectedTarget} className="mt-1 select-arrow w-full rounded-lg border border-[#2c2c2c] px-2 py-1.5 text-sm">
                 <option value="">Semua</option>
-                {objects.map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
+                {targets.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
             </label>
@@ -116,7 +128,7 @@ export default async function KunjunganPage({ searchParams }: { searchParams: Re
             {visits.length === 300 && <span className="ml-2 text-xs text-neutral-600">(menampilkan 300 terbaru; persempit filter untuk melihat lainnya)</span>}
           </p>
 
-          <VisitManager rows={rows} objects={objects} events={eventOptions} defaultDate={sp.from && sp.from === sp.to ? sp.from : today} exportHref={`/api/pelaku/visits/export?${exportQs.toString()}`} />
+          <VisitManager rows={rows} targets={targets} events={eventOptions} defaultDate={sp.from && sp.from === sp.to ? sp.from : today} exportHref={`/api/pelaku/visits/export?${exportQs.toString()}`} />
         </>
       )}
     </>
