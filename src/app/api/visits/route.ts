@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
-import { KuotaError, openOn, registerVisit } from "@/lib/kuota";
+import { KuotaError, eventOpenOn, objectOpenOn, registerVisit, type VisitTarget } from "@/lib/kuota";
+import { VISIBLE_STATUSES, visibleEvent } from "@/lib/culture-db";
 import { prisma } from "@/lib/prisma";
 import { fail, firstIssue, readBody } from "@/lib/api";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
@@ -22,23 +23,35 @@ export async function POST(req: Request) {
   if (d.visitDate < hariIniJakarta()) return fail("Tanggal kunjungan tidak boleh di masa lalu");
 
   try {
-    const object = await prisma.culturalObject.findFirst({
-      where: { id: d.objectId, status: { in: ["VERIFIED", "SEED"] } },
-      select: { id: true, isEvent: true, weekdays: true, dailyQuota: true, events: { where: { isActive: true } } },
-    });
-    if (!object) return fail("Destinasi tidak ditemukan", 404);
-    if (object.dailyQuota === null) return fail("Tempat ini tidak memerlukan pendaftaran");
-
-    const { open, eventId } = openOn(object, d.visitDate);
-    if (!open) return fail(object.isEvent ? "Event tidak berlangsung pada tanggal ini" : "Tempat ini tutup pada hari tersebut");
-    if (d.eventId && !object.events.some((e) => e.id === d.eventId)) return fail("Event tidak sesuai dengan destinasi");
+    let target: VisitTarget;
+    if (d.objectId) {
+      // Destinasi: hari buka. `eventId` (opsional) menandai kegiatan pada destinasi itu.
+      const object = await prisma.culturalObject.findFirst({
+        where: { id: d.objectId, status: { in: [...VISIBLE_STATUSES] } },
+        select: { id: true, weekdays: true, dailyQuota: true, events: { where: { isActive: true }, select: { id: true } } },
+      });
+      if (!object) return fail("Destinasi tidak ditemukan", 404);
+      if (object.dailyQuota === null) return fail("Tempat ini tidak memerlukan pendaftaran");
+      if (!objectOpenOn(object, d.visitDate)) return fail("Tempat ini tutup pada hari tersebut");
+      if (d.eventId && !object.events.some((e) => e.id === d.eventId)) return fail("Event tidak sesuai dengan destinasi");
+      target = { objectId: object.id, eventId: d.eventId ?? null };
+    } else {
+      // Event mandiri: tanggalnya harus termasuk jadwal event.
+      const event = await prisma.culturalEvent.findFirst({
+        where: { id: d.eventId!, isActive: true, objectId: null, ...visibleEvent },
+        select: { id: true, dailyQuota: true, startsOn: true, endsOn: true, repeatsYearly: true, weekdays: true, exceptDates: true },
+      });
+      if (!event) return fail("Event tidak ditemukan", 404);
+      if (event.dailyQuota === null) return fail("Event ini tidak memerlukan pendaftaran");
+      if (!eventOpenOn(event, d.visitDate)) return fail("Event tidak berlangsung pada tanggal ini");
+      target = { eventId: event.id };
+    }
 
     const created = await registerVisit({
       user,
-      objectId: object.id,
+      target,
       date: d.visitDate,
       partySize: d.partySize,
-      eventId: eventId ?? d.eventId ?? null,
       contact: d.contact,
       note: d.note,
     });
