@@ -1,11 +1,9 @@
 import { z } from "zod";
-import { DEPTHS, INTERESTS, LODGINGS, OBJECT_KINDS, PACES, SLOTS, STYLES, TRANSPORTS, ZONES } from "@/lib/culture";
+import { DEPTHS, INTERESTS, LODGINGS, OBJECT_KINDS, PACES, SLOTS, STYLES, TRANSPORTS } from "@/lib/culture";
 
 /** Wilayah diketik bebas; dirapikan agar "bantul " dan "BANTUL" tidak menjadi dua wilayah berbeda. */
 function normalizeZone(raw: string): string {
   const clean = raw.trim().replace(/\s+/g, " ");
-  const known = ZONES.find((z) => z.toLowerCase() === clean.toLowerCase());
-  if (known) return known;
   return clean.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 }
 
@@ -167,6 +165,17 @@ export const eventProposalSchema = z
     if (d.endsOn && d.endsOn < d.startsOn) ctx.addIssue({ code: "custom", message: "Tanggal selesai tidak boleh sebelum tanggal mulai", path: ["endsOn"] });
   });
 
+/** Pelaku UMKM menambah / mengubah produk. Tetap PENDING (tersembunyi) sampai kurator memverifikasi. */
+export const umkmProductSchema = z.object({
+  name: z.string().trim().min(3, "Nama produk minimal 3 karakter").max(80),
+  umkm: z.string().trim().min(2, "Nama usaha minimal 2 karakter").max(80),
+  zone: z.string().trim().min(2, "Wilayah minimal 2 karakter").max(60).transform(normalizeZone),
+  priceIdr: z.number().int("Harga harus bilangan bulat").min(1000, "Harga minimal Rp 1.000").max(50_000_000),
+  story: z.string().trim().min(20, "Cerita minimal 20 karakter").max(600),
+  imageUrl: z.string().trim().max(500).optional(),
+  isActive: z.boolean().default(true),
+});
+
 export const verifySchema = z.object({
   action: z.enum(["VERIFY", "REJECT"]),
   /** Curator's judgement: run by a local community / practitioner (counts toward the impact figure). */
@@ -217,7 +226,7 @@ export const registerSchema = z
     }),
     password: strongPassword,
     confirmPassword: z.string(),
-    role: z.enum(["TRAVELER", "PRACTITIONER"]).default("TRAVELER"),
+    role: z.enum(["TRAVELER", "PRACTITIONER", "UMKM"]).default("TRAVELER"),
     next: z.string().max(2000).optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
