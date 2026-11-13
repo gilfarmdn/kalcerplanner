@@ -11,18 +11,17 @@ type Props = {
   next: string;
   /** Site key Cloudflare Turnstile untuk form daftar; null = tidak dipakai. */
   turnstileSiteKey?: string | null;
-  /** "umkm" = halaman masuk / daftar khusus pelaku UMKM (/umkm/masuk, /umkm/daftar): akun yang dibuat berperan UMKM. */
-  audience?: "umkm";
+  /** Pilihan peran awal di form daftar (mis. dari tautan "Daftar sebagai UMKM"). Peran tetap bisa diganti. */
+  initialRole?: "TRAVELER" | "PRACTITIONER" | "UMKM";
 };
 
-export default function AuthForm({ mode, next, turnstileSiteKey = null, audience }: Props) {
+export default function AuthForm({ mode, next, turnstileSiteKey = null, initialRole = "TRAVELER" }: Props) {
   const isLogin = mode === "login";
-  const isUmkm = audience === "umkm";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<"TRAVELER" | "PRACTITIONER" | "UMKM">(isUmkm ? "UMKM" : "TRAVELER");
+  const [role, setRole] = useState<"TRAVELER" | "PRACTITIONER" | "UMKM">(initialRole);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [needsVerify, setNeedsVerify] = useState(false);
@@ -94,8 +93,8 @@ export default function AuthForm({ mode, next, turnstileSiteKey = null, audience
   }
 
   const withNext = (path: string) => (next ? `${path}?next=${encodeURIComponent(next)}` : path);
-  const loginHref = withNext(isUmkm ? "/umkm/masuk" : "/masuk");
-  const otherHref = withNext(isUmkm ? (isLogin ? "/umkm/daftar" : "/umkm/masuk") : isLogin ? "/daftar" : "/masuk");
+  const loginHref = withNext("/masuk");
+  const otherHref = withNext(isLogin ? "/daftar" : "/masuk");
 
   if (sentTo) {
     return (
@@ -121,22 +120,14 @@ export default function AuthForm({ mode, next, turnstileSiteKey = null, audience
   return (
     <form onSubmit={onSubmit} className={cardClass}>
       <div className="flex flex-col gap-6">
-        {isUmkm && (
-          <div>
-            <h1 className="text-xl font-semibold">{isLogin ? "Masuk Pelaku UMKM" : "Daftar Pelaku UMKM"}</h1>
-            <p className="mt-1 text-sm text-neutral-600">
-              {isLogin ? "Kelola produk oleh-oleh usahamu di Galeri UMKM." : "Daftarkan usahamu agar produknya bisa tampil di Galeri UMKM dan saran oleh-oleh wisatawan."}
-            </p>
-          </div>
-        )}
         {!isLogin && (
           <label className="flex flex-col gap-2 text-base">
-            {isUmkm ? "Nama pemilik / usaha" : "Nama"}
+            Nama
             <input required minLength={2} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama lengkap" className={inputClass} />
           </label>
         )}
 
-        {!isLogin && !isUmkm && (
+        {!isLogin && (
           <fieldset className="flex flex-col gap-2 text-base">
             <legend className="mb-1">Saya adalah</legend>
             <label className="inline-flex items-center gap-2">
@@ -200,15 +191,6 @@ export default function AuthForm({ mode, next, turnstileSiteKey = null, audience
           <Link href="/lupa-password" className="text-base text-brand-link underline">
             Lupa password?
           </Link>
-        )}
-
-        {isLogin && !isUmkm && (
-          <p className="text-sm text-neutral-600">
-            Punya usaha oleh-oleh?{" "}
-            <Link href="/umkm/masuk" className="text-brand-link underline">
-              Masuk sebagai UMKM
-            </Link>
-          </p>
         )}
 
         <p className="text-base">
