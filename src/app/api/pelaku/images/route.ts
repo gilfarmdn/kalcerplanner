@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fail } from "@/lib/api";
-import { guardPelaku } from "@/lib/pelaku-api";
+import { fail, guard } from "@/lib/api";
 import { MAX_IMAGE_BYTES, imageUrlFor, sniffImageType } from "@/lib/images";
 
-/** Unggah foto (multipart, field "file") untuk destinasi atau event. Mengembalikan URL yang lalu disimpan di imageUrl. */
+/** Unggah foto (multipart, field "file") untuk destinasi, event, atau produk UMKM. Mengembalikan URL yang lalu disimpan di imageUrl. */
 export async function POST(req: Request) {
-  const g = await guardPelaku();
+  // Foto event / destinasi (pelaku budaya) dan foto produk (pelaku UMKM).
+  const g = await guard(["PRACTITIONER", "UMKM"]);
   if (!g.ok) return g.error;
 
   let file: FormDataEntryValue | null;
