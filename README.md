@@ -12,7 +12,7 @@ cp .env.example .env        # lalu ubah POSTGRES_PASSWORD dan AUTH_SECRET (wajib
 docker compose up --build
 ```
 
-Buka http://localhost:3000. Compose menjalankan PostgreSQL, job `migrate` satu kali (membuat tabel; data sampel Yogyakarta hanya dibuat bila `SEED_SAMPLE_DATA=true`), lalu aplikasi.
+Buka http://localhost:3000. Compose menjalankan PostgreSQL, job `migrate` satu kali (membuat tabel dan, bila diisi, akun kurator; tidak ada data budaya awal), lalu aplikasi.
 
 - **Akun kurator (opsional):** isi `ADMIN_EMAIL` dan `ADMIN_PASSWORD` di `.env` sebelum `docker compose up`. Seed membuat akun ADMIN yang bisa memverifikasi pengajuan di `/admin`.
 - **Upgrade dari versi sebelumnya:** skema berubah besar (tabel `TripRequest` dan `Partner` dihapus). Jalankan sekali `docker compose down -v` lalu `docker compose up --build` agar database dibuat ulang. Data lama (akun, rencana lama) ikut terhapus.
@@ -25,7 +25,7 @@ cp .env.example .env
 docker compose up -d db
 npm install                 # juga menjalankan `prisma generate`
 npm run db:push             # buat tabel
-npm run db:seed             # akun kurator; tambahkan SEED_SAMPLE_DATA=true untuk data sampel Yogyakarta
+npm run db:seed             # membuat akun kurator dari ADMIN_EMAIL / ADMIN_PASSWORD (tidak ada data budaya awal)
 npm run dev
 npm run check:planner       # uji mesin rekomendasi (tanpa database)
 ```
@@ -66,7 +66,7 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 
 1. Skor tiap objek dari **minat** (utama/tambahan), **kedalaman** (menikmati → belajar → terlibat), **dikelola pelaku setempat**, **kurang padat** (dan "sebarkan kunjungan"), harga (khusus Hemat), serta **jarak** ke agenda lain hari itu (haversine).
 2. Hanya memilih tempat yang **buka pada hari itu** (`weekdays`) dan muat di slot waktu (`slots` × durasi).
-3. Total disesuaikan dengan anggaran setelah biaya dasar (makan, penginapan, transportasi lokal, biaya ke Yogyakarta isian pengguna) dan cadangan oleh-oleh; bila biaya dasar saja melebihi anggaran, hanya tempat gratis yang ditawarkan, disertai catatan.
+3. Total disesuaikan dengan anggaran setelah biaya dasar (makan, penginapan, transportasi lokal, biaya perjalanan ke tujuan isian pengguna) dan cadangan oleh-oleh; bila biaya dasar saja melebihi anggaran, hanya tempat gratis yang ditawarkan, disertai catatan.
 4. Setiap tempat membawa daftar `reasons`; hasil disimpan sebagai snapshot di `TripItem`. Saat menyimpan, **server menghitung ulang** rencana (tidak mempercayai harga dari browser).
 
 **Angka "dampak lokal"** = total tiket/kelas pada tempat yang ditandai `localRun` (dikelola pelaku/komunitas/lembaga budaya setempat) ÷ total tiket. Penandaan itu keputusan kurator; ini perkiraan alokasi, bukan data transaksi riil.
@@ -75,7 +75,7 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 
 - `public/images/logo/logo.png` — logo asli; `logo-trim.png` (potongan untuk navbar, login, footer, dasbor) dan `src/app/icon.png` (favicon) dibuat darinya
 - `public/images/hero.svg` — latar hero / login / banner Jelajah
-- `public/images/umkm/*.svg` — 6 produk UMKM (ubah path di `src/lib/content.ts`)
+- Produk UMKM: foto diunggah pelaku UMKM sendiri lewat `/produk`
 - `public/images/avatar.svg` — avatar ulasan
 - Objek budaya: set `imageUrl` per objek (Prisma Studio atau `/destinasi`)
 
@@ -86,9 +86,9 @@ Aturan deterministik dan dapat dijelaskan, bukan kotak hitam:
 | `npm run dev` | Server pengembangan |
 | `npm run build` / `npm start` | Build / server produksi |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run check:planner` | Uji invarian mesin rekomendasi dan data seed |
+| `npm run check:planner` | Uji invarian mesin rekomendasi terhadap data di database (hanya membaca) |
 | `npm run db:push` | Sinkronkan skema Prisma ke database |
-| `npm run db:seed` | Seed (aman diulang) |
+| `npm run db:seed` | Membuat akun kurator bila `ADMIN_EMAIL` diisi (aman diulang) |
 | `npm run db:studio` | Prisma Studio (moderasi ulasan: `isPublished`; ubah status objek) |
 
 ## Catatan
