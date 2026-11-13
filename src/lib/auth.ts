@@ -19,7 +19,7 @@ export type CurrentUser = {
   id: string;
   name: string;
   email: string;
-  role: "TRAVELER" | "PRACTITIONER" | "ADMIN";
+  role: "TRAVELER" | "PRACTITIONER" | "UMKM" | "ADMIN";
   avatarUrl: string | null;
 };
 
@@ -54,6 +54,11 @@ export async function requireRole(role: CurrentUser["role"], next: string): Prom
 /** Halaman khusus pelaku budaya. */
 export function requirePractitioner(next: string): Promise<CurrentUser> {
   return requireRole("PRACTITIONER", next);
+}
+
+/** Halaman khusus pelaku UMKM. */
+export function requireUmkm(next: string): Promise<CurrentUser> {
+  return requireRole("UMKM", next);
 }
 
 export async function getSession(): Promise<SessionUser | null> {
