@@ -52,7 +52,7 @@ export default function EventManager({ objectId, events }: { objectId: string; e
           recurrence: rec.recurrence,
           weekdays: rec.weekdays,
           exceptDates: rec.exceptDates,
-          venue: f.get("venue") || undefined,
+          venue: f.get("venue"),
           isActive: f.get("isActive") === "on",
         }),
       });
@@ -155,8 +155,8 @@ export default function EventManager({ objectId, events }: { objectId: string; e
             <input name="endsOn" type="date" defaultValue={cur?.endsOn} className={`${input} mt-1`} />
           </label>
           <label className="text-sm font-medium sm:col-span-2">
-            Lokasi spesifik (opsional)
-            <input name="venue" maxLength={120} placeholder="Mis. Pendopo utama" defaultValue={cur?.venue} className={`${input} mt-1`} />
+            Lokasi spesifik (wajib diisi)
+            <input name="venue" required maxLength={120} placeholder="Mis. Pendopo utama" defaultValue={cur?.venue} className={`${input} mt-1`} />
           </label>
           <label className="inline-flex items-center gap-2 text-sm">
             <input name="isActive" type="checkbox" defaultChecked={cur?.isActive ?? true} />
