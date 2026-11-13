@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /** Curator controls: verify (with impact flags) or reject a submitted object. */
-export default function VerifyButtons({ objectId, kind = "object" }: { objectId: string; kind?: "object" | "event" }) {
+export default function VerifyButtons({ objectId, kind = "object" }: { objectId: string; kind?: "object" | "event" | "umkm" }) {
   const router = useRouter();
   const [localRun, setLocalRun] = useState(true);
   const [hiddenGem, setHiddenGem] = useState(false);
@@ -15,10 +15,10 @@ export default function VerifyButtons({ objectId, kind = "object" }: { objectId:
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/${kind === "event" ? "events" : "objects"}/${objectId}`, {
+      const res = await fetch(`/api/${kind === "event" ? "events" : kind === "umkm" ? "admin/umkm" : "objects"}/${objectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(action === "VERIFY" ? { action, localRun, hiddenGem } : { action }),
+        body: JSON.stringify(action === "VERIFY" && kind !== "umkm" ? { action, localRun, hiddenGem } : { action }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -35,6 +35,7 @@ export default function VerifyButtons({ objectId, kind = "object" }: { objectId:
 
   return (
     <div className="mt-3 space-y-2 border-t border-neutral-300 pt-3 text-sm">
+      {kind !== "umkm" && (
       <div className="flex flex-wrap gap-4">
         <label className="inline-flex items-center gap-2">
           <input type="checkbox" checked={localRun} onChange={(e) => setLocalRun(e.target.checked)} />
@@ -45,6 +46,7 @@ export default function VerifyButtons({ objectId, kind = "object" }: { objectId:
           Kurang padat pengunjung
         </label>
       </div>
+      )}
       <div className="flex gap-2">
         <button type="button" onClick={() => act("VERIFY")} disabled={busy} className="rounded-[5px] bg-emerald-700 px-3 py-1 font-semibold text-white disabled:opacity-60">
           Verifikasi
