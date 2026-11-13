@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function KurasiPage() {
   await requireRole("ADMIN", "/admin");
 
-  const [pending, pendingEvents] = await Promise.all([
+  const [pending, pendingEvents, pendingProducts] = await Promise.all([
     prisma.culturalObject.findMany({
       where: { status: "PENDING" },
       orderBy: { createdAt: "asc" },
@@ -21,6 +21,12 @@ export default async function KurasiPage() {
     // Event budaya diajukan lewat tabel tersendiri (CulturalEvent), jadi antreannya juga terpisah.
     prisma.culturalEvent.findMany({
       where: { status: "PENDING", ownerId: { not: null }, objectId: null },
+      orderBy: { createdAt: "asc" },
+      include: { owner: { select: { name: true, email: true } } },
+    }),
+    // Produk UMKM diajukan pelaku UMKM; antreannya juga terpisah.
+    prisma.umkmProduct.findMany({
+      where: { status: "PENDING", ownerId: { not: null } },
       orderBy: { createdAt: "asc" },
       include: { owner: { select: { name: true, email: true } } },
     }),
@@ -95,6 +101,28 @@ export default async function KurasiPage() {
                 {e.dailyQuota != null ? `kuota ${e.dailyQuota} orang/tanggal` : "tanpa pendaftaran"}
               </p>
               <VerifyButtons objectId={e.id} kind="event" />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="mt-10 text-lg font-semibold">Produk UMKM menunggu verifikasi ({pendingProducts.length})</h2>
+      {pendingProducts.length === 0 ? (
+        <p className="mt-2 text-neutral-700">Tidak ada pengajuan produk.</p>
+      ) : (
+        <ul className="mt-4 max-w-3xl space-y-4">
+          {pendingProducts.map((p) => (
+            <li key={p.id} className="flex gap-4 rounded-[10px] border border-neutral-400 bg-white p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.imageUrl || `/api/placeholder/${p.id}`} alt="" className="h-24 w-20 shrink-0 rounded object-cover" />
+              <div className="min-w-0">
+                <p className="text-lg font-semibold">{p.name}</p>
+                <p className="text-sm text-neutral-600">
+                  {p.umkm} · {p.zone} · Rp {p.priceIdr.toLocaleString("id-ID")} · diajukan oleh {p.owner?.name ?? "—"} ({p.owner?.email ?? "—"})
+                </p>
+                <p className="mt-2 text-sm">{p.story}</p>
+                <VerifyButtons objectId={p.id} kind="umkm" />
+              </div>
             </li>
           ))}
         </ul>
