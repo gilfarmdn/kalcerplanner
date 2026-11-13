@@ -71,7 +71,7 @@ export const eventSchema = z
     recurrence: z.enum(["ONCE", "YEARLY", "WEEKLY"]).default("ONCE"),
     weekdays: z.array(z.number().int().min(0).max(6)).max(7).default([]),
     exceptDates: z.array(dateString).max(100).default([]),
-    venue: optionalText(120),
+    venue: z.string({ required_error: "Lokasi wajib diisi" }).trim().min(1, "Lokasi wajib diisi").max(120, "Maksimal 120 karakter"),
     isActive: z.boolean().default(true),
   })
   .superRefine((v, ctx) => {
