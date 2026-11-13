@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/auth";
 export const metadata: Metadata = { title: "Profil — KalcerPlanner" };
 export const dynamic = "force-dynamic";
 
-const roleLabels = { TRAVELER: "Wisatawan", PRACTITIONER: "Pelaku budaya", ADMIN: "Kurator" } as const;
+const roleLabels = { TRAVELER: "Wisatawan", PRACTITIONER: "Pelaku budaya", UMKM: "Pelaku UMKM", ADMIN: "Kurator" } as const;
 
 export default async function ProfilPage() {
   const user = await requireUser("/profil");
