@@ -6,7 +6,6 @@ import { useState } from "react";
 import VisitRegistration, { RegisterAll } from "@/components/VisitRegistration";
 import { formatHariPanjang, hariIniJakarta } from "@/lib/tanggal";
 import { formatRupiah, kindLabel, slotInfo } from "@/lib/culture";
-import { pickSouvenirs } from "@/lib/content";
 import type { Plan } from "@/lib/planner";
 import type { PlanInputBody } from "@/lib/validators";
 
@@ -18,7 +17,7 @@ export default function PlanResults({ plans, input, isLoggedIn }: { plans: Plan[
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const plan = plans[active];
-  const souvenirs = input.includeSouvenir ? pickSouvenirs(plan.souvenirAllowance) : [];
+  const souvenirs = input.includeSouvenir ? (plan.souvenirs ?? []) : [];
   const party = input.adults + input.children;
   const today = hariIniJakarta();
   // Tempat / event berkuota di rencana ini (pendaftaran terpisah dari menyimpan rencana).
