@@ -20,6 +20,7 @@ enum TokenType {
 enum Role {
   TRAVELER
   PRACTITIONER // pelaku budaya: sanggar, pengrajin, pengelola situs/komunitas
+  UMKM // pelaku usaha: mengelola produk oleh-oleh sendiri di Galeri UMKM
   ADMIN // kurator: memverifikasi data budaya
 }
 
@@ -103,6 +104,7 @@ model User {
   stamps          Stamp[]
   objects         CulturalObject[]
   events          CulturalEvent[]
+  umkmProducts    UmkmProduct[]
   tokens          AuthToken[]
   images          ImageAsset[]
   visits          Visit[]
@@ -398,4 +400,30 @@ model EmailBounce {
   email     String   @id
   reason    String
   createdAt DateTime @default(now())
+}
+
+// Produk UMKM untuk Galeri UMKM dan saran oleh-oleh di rencana. `zone` memakai penamaan wilayah yang sama dengan
+// CulturalObject/CulturalEvent (kabupaten / kota), supaya saran oleh-oleh mengikuti wilayah tempat-tempat di rencana.
+model UmkmProduct {
+  id         String       @id @default(cuid())
+  name       String
+  // Nama usaha / pelaku UMKM.
+  umkm       String
+  zone       String
+  priceIdr   Int
+  // "/api/images/<id>" atau path statis; kosong = gambar bawaan.
+  imageUrl   String?
+  // Cerita budaya di balik oleh-oleh.
+  story      String       @db.Text
+  // Pemilik mengatur tampil / sembunyi sendiri; `status` ditentukan kurator (PENDING = menunggu verifikasi).
+  isActive   Boolean      @default(true)
+  status     ObjectStatus @default(PENDING)
+  verifiedAt DateTime?
+  ownerId    String?
+  owner      User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @default(now()) @updatedAt
+
+  @@index([isActive, status, zone])
+  @@index([ownerId])
 }
