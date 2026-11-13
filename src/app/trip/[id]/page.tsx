@@ -9,6 +9,7 @@ import VisitRegistration, { RegisterAll } from "@/components/VisitRegistration";
 import { requireUser } from "@/lib/auth";
 import { roleHome } from "@/lib/role-home";
 import { pickSouvenirs } from "@/lib/content";
+import { getUmkmProducts } from "@/lib/umkm";
 import { formatRupiah, kindLabel, slotInfo, styleLabel, weekdayNames } from "@/lib/culture";
 import { placeKey, placeKindLabel, placeOf } from "@/lib/place";
 import { formatHariPanjang, formatRentang, hariIniJakarta, dayString } from "@/lib/tanggal";
@@ -52,7 +53,11 @@ export default async function TripDetailPage({ params }: { params: { id: string 
     const date = dayString(new Date(trip.startDate.getTime() + i.dayIndex * DAY_MS));
     return [i.objectId ? { objectId: i.objectId, name: place.name, date } : { eventId: i.eventId!, name: place.name, date }];
   });
-  const souvenirs = trip.includeSouvenir && remaining ? pickSouvenirs(remaining) : [];
+  // Oleh-oleh dari UMKM di wilayah tempat-tempat dalam rencana ini.
+  const souvenirs =
+    trip.includeSouvenir && remaining
+      ? pickSouvenirs(remaining, [...new Set(trip.items.map((i) => placeOf(i).zone))], await getUmkmProducts())
+      : [];
 
   return (
     <SiteShell>
