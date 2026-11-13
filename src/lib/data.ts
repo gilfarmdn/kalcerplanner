@@ -6,13 +6,8 @@ export type LandingData = {
   highlights: HighlightItem[];
 };
 
-const fallback: LandingData = {
-  highlights: [
-    { id: "h1", title: "Menyusuri Sumbu Filosofi", imageUrl: "/api/placeholder/sumbu-filosofi", href: "/jelajah/sumbu-filosofi" },
-    { id: "h2", title: "Belajar Batik di Giriloyo", imageUrl: "/api/placeholder/batik-giriloyo", href: "/jelajah/batik-giriloyo" },
-    { id: "h3", title: "Wayang Kulit di Sonobudoyo", imageUrl: "/api/placeholder/wayang-kulit-sonobudoyo", href: "/jelajah/wayang-kulit-sonobudoyo" },
-  ],
-};
+// Tanpa data (database kosong / tidak terbaca) bagian highlight disembunyikan, bukan diisi tautan ke objek yang tidak ada.
+const fallback: LandingData = { highlights: [] };
 
 /** Mengacak daftar (Fisher-Yates) lalu mengambil n item pertama. */
 function pickRandom<T>(list: T[], n: number): T[] {
@@ -40,7 +35,7 @@ export async function getLandingData(): Promise<LandingData> {
     }));
 
     return {
-      highlights: randomHighlights.length ? randomHighlights : fallback.highlights,
+      highlights: randomHighlights,
     };
   } catch (error) {
     console.error("[getLandingData] database unavailable, using fallback content", error);
