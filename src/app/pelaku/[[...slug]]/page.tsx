@@ -20,6 +20,6 @@ export default async function OldPelakuRedirect({ params, searchParams }: { para
 
   const user = await getUser();
   if (!user) redirect("/masuk");
-  if (section === "profil") redirect(user.role === "ADMIN" ? "/admin/profil" : user.role === "PRACTITIONER" ? "/destinasi/profil" : "/profil");
+  if (section === "profil") redirect(user.role === "ADMIN" ? "/admin/profil" : user.role === "PRACTITIONER" ? "/destinasi/profil" : user.role === "UMKM" ? "/produk/profil" : "/profil");
   redirect(roleHome(user.role));
 }
