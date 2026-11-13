@@ -9,7 +9,7 @@ import { formatRentang } from "@/lib/tanggal";
 export const metadata: Metadata = { title: "Kelola Akun — KalcerPlanner" };
 export const dynamic = "force-dynamic";
 
-const ROLES = { PRACTITIONER: "Pelaku budaya", TRAVELER: "Pengguna" } as const;
+const ROLES = { PRACTITIONER: "Pelaku budaya", UMKM: "Pelaku UMKM", TRAVELER: "Pengguna" } as const;
 type ManagedRole = keyof typeof ROLES;
 
 const tanggal = (d: Date) => formatRentang(d, d);
@@ -17,7 +17,7 @@ const tanggal = (d: Date) => formatRentang(d, d);
 export default async function AkunPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   await requireRole("ADMIN", "/admin/akun");
 
-  const role: ManagedRole = searchParams.peran === "TRAVELER" ? "TRAVELER" : "PRACTITIONER";
+  const role: ManagedRole = searchParams.peran === "TRAVELER" || searchParams.peran === "UMKM" ? searchParams.peran : "PRACTITIONER";
   const status = searchParams.status === "nonaktif" || searchParams.status === "aktif" ? searchParams.status : "";
   const q = (searchParams.q ?? "").trim().slice(0, 80);
 
@@ -36,7 +36,7 @@ export default async function AkunPage({ searchParams }: { searchParams: Record<
       createdAt: true,
       emailVerifiedAt: true,
       deactivatedAt: true,
-      _count: { select: { objects: true, trips: true, visits: true } },
+      _count: { select: { objects: true, umkmProducts: true, trips: true, visits: true } },
     },
   });
 
@@ -104,7 +104,11 @@ export default async function AkunPage({ searchParams }: { searchParams: Record<
                 <p className="truncate text-sm text-neutral-700">{a.email}</p>
                 <p className="mt-1 text-xs text-neutral-600">
                   Terdaftar {tanggal(a.createdAt)} · {a.emailVerifiedAt ? "email terverifikasi" : "email belum diverifikasi"} ·{" "}
-                  {role === "PRACTITIONER" ? `${a._count.objects} destinasi/event` : `${a._count.trips} rencana · ${a._count.visits} pendaftaran`}
+                  {role === "PRACTITIONER"
+                    ? `${a._count.objects} destinasi/event`
+                    : role === "UMKM"
+                      ? `${a._count.umkmProducts} produk`
+                      : `${a._count.trips} rencana · ${a._count.visits} pendaftaran`}
                   {a.deactivatedAt && ` · dinonaktifkan ${tanggal(a.deactivatedAt)}`}
                 </p>
               </div>
