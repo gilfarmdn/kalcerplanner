@@ -23,7 +23,7 @@ export default function UmkmGallery({ products }: { products: UmkmProduct[] }) {
       <h1 className="font-serif text-3xl font-bold sm:text-[40px]">Galeri UMKM Wisata Budaya</h1>
       <p className="mt-2 text-sm text-neutral-700">
         Punya usaha oleh-oleh khas daerah?{" "}
-        <Link href="/daftar?peran=umkm" className="text-brand-link underline">
+        <Link href="/daftar" className="text-brand-link underline">
           Daftar
         </Link>{" "}
         atau{" "}
