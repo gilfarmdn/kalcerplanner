@@ -55,3 +55,6 @@ export async function uploadEventPhoto(file: File): Promise<string> {
   if (!res.ok) throw new Error(json.error ?? "Gagal mengunggah foto");
   return json.url as string;
 }
+
+/** Mengecilkan lalu mengunggah satu foto (ImageAsset). Mengembalikan URL-nya, untuk dikirim sebagai imageUrl. */
+export const uploadImage = uploadEventPhoto;
