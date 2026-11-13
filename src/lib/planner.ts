@@ -22,6 +22,7 @@ import {
   type Slot,
   type Transport,
 } from "./culture";
+import type { UmkmProduct } from "./content";
 import { eventOccursOn, type EventSchedule } from "./kalender";
 
 export type PlannerObject = {
@@ -115,8 +116,13 @@ export type Plan = {
   itemCount: number;
   remaining: number | null;
   souvenirAllowance: number;
+  /** Saran oleh-oleh dari UMKM di wilayah rencana ini; diisi server (/api/plans), bukan mesin rencana. */
+  souvenirs?: UmkmProduct[];
   notes: string[];
 };
+
+/** Wilayah (zone) dari semua tempat di rencana. */
+export const planZones = (plan: Plan): string[] => [...new Set(plan.days.flatMap((d) => d.items.map((it) => it.object.zone)))];
 
 const MAX_DAYS = 7;
 const DAY_MS = 86_400_000;
