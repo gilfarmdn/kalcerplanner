@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { CalendarPlus, Database, Globe, ShieldCheck, User, Users } from "lucide-react";
+import { CalendarPlus, Database, Globe, PackagePlus, ShieldCheck, ShoppingBag, User, Users } from "lucide-react";
 import SidebarNav, { type SidebarItem } from "@/components/SidebarNav";
 
 // Halaman lain di bawah /destinasi/ (selain menu di bawah ini) adalah detail destinasi milik My Destination.
@@ -26,10 +26,29 @@ const adminItems: SidebarItem[] = [
   { href: "/admin/profil", label: "Profil", icon: User, match: (p) => p.startsWith("/admin/profil") },
 ];
 
-/** Menu samping dasbor pelaku budaya dan kurator (bisa diperkecil menjadi ikon; di layar kecil menjadi baris menu yang bisa digeser). */
-export default function PelakuSidebar({ isAdmin }: { isAdmin: boolean }) {
-  const pathname = usePathname() ?? (isAdmin ? "/admin" : "/destinasi");
-  return (
-    <SidebarNav items={isAdmin ? adminItems : items} pathname={pathname} label={isAdmin ? "Menu kurator" : "Menu pelaku budaya"} />
-  );
+// Pelaku UMKM mengelola produk oleh-oleh sendiri. Halaman lain di bawah /produk/ (selain menu di bawah) adalah detail produk.
+const otherUmkmPages = ["/produk/tambah", "/produk/profil"];
+
+const umkmItems: SidebarItem[] = [
+  {
+    href: "/produk",
+    label: "Produk Saya",
+    icon: ShoppingBag,
+    match: (p) => p === "/produk" || (p.startsWith("/produk/") && !otherUmkmPages.some((x) => p.startsWith(x))),
+  },
+  { href: "/produk/tambah", label: "Tambah Produk", icon: PackagePlus, match: (p) => p.startsWith("/produk/tambah") },
+  { href: "/produk/profil", label: "Profil", icon: User, match: (p) => p.startsWith("/produk/profil") },
+];
+
+const menus = {
+  PRACTITIONER: { items, label: "Menu pelaku budaya", home: "/destinasi" },
+  ADMIN: { items: adminItems, label: "Menu kurator", home: "/admin" },
+  UMKM: { items: umkmItems, label: "Menu pelaku UMKM", home: "/produk" },
+} as const;
+
+/** Menu samping dasbor pelaku budaya, pelaku UMKM, dan kurator (bisa diperkecil menjadi ikon; di layar kecil menjadi baris menu yang bisa digeser). */
+export default function PelakuSidebar({ role }: { role: keyof typeof menus }) {
+  const menu = menus[role];
+  const pathname = usePathname() ?? menu.home;
+  return <SidebarNav items={menu.items} pathname={pathname} label={menu.label} />;
 }
