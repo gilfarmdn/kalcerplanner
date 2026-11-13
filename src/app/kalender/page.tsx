@@ -36,8 +36,15 @@ export default async function KalenderPage() {
     title: e.title,
     zone: e.zone ?? e.object?.zone ?? "",
     description: e.description,
-    // Lokasi: isian khusus event bila ada, kalau tidak nama + alamat objek terkait.
-    location: e.venue ?? e.address ?? (e.object ? [e.object.name, e.object.address].filter(Boolean).join(", ") : null),
+    // Lokasi: isian khusus event bila ada, kalau tidak alamat event, lalu nama + alamat objek terkait,
+    // dan terakhir kota/kabupaten (zone) yang wajib diisi.
+    location:
+      e.venue?.trim() ||
+      e.address?.trim() ||
+      (e.object ? [e.object.name, e.object.address].filter(Boolean).join(", ") : "") ||
+      e.zone ||
+      e.object?.zone ||
+      null,
     objectSlug: e.object?.slug ?? null,
     // Event mandiri punya halaman detail sendiri; catatan kalender menautkan ke destinasinya (bila ada).
     href: standalone.has(e.id) ? EVENT_HREF(e.slug) : e.object?.slug ? `/jelajah/${e.object.slug}` : null,
