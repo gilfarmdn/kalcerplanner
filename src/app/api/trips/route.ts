@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const plan = buildSinglePlan(style, objects, events, input);
     if (plan.itemCount === 0) return fail("Rencana kosong. Ubah minat atau anggaranmu lalu coba lagi.");
 
-    // Judul memakai wilayah tempat-tempat di rencana (platform tidak lagi terbatas di Yogyakarta).
+    // Judul memakai wilayah tempat-tempat di rencana.
     const zones = [...new Set(plan.days.flatMap((d) => d.items.map((it) => it.object.zone)))];
     const destination = zones.length <= 2 ? zones.join(" & ") : `${zones[0]} dan sekitarnya`;
     const start = new Date(`${input.startDate}T00:00:00.000Z`);
