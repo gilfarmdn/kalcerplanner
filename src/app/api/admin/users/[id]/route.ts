@@ -7,9 +7,9 @@ import { prisma } from "@/lib/prisma";
 
 const actionSchema = z.object({ action: z.enum(["DEACTIVATE", "ACTIVATE"]) });
 
-/** Akun yang boleh dikelola kurator: pelaku budaya dan pengguna (bukan sesama kurator). */
+/** Akun yang boleh dikelola kurator: pelaku budaya, pelaku UMKM, dan pengguna (bukan sesama kurator). */
 const findManagedUser = (id: string) =>
-  prisma.user.findFirst({ where: { id, role: { in: ["PRACTITIONER", "TRAVELER"] } }, select: { id: true, deactivatedAt: true } });
+  prisma.user.findFirst({ where: { id, role: { in: ["PRACTITIONER", "UMKM", "TRAVELER"] } }, select: { id: true, deactivatedAt: true } });
 
 /** Kurator menonaktifkan (tidak bisa masuk) atau mengaktifkan kembali sebuah akun. */
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -57,6 +57,8 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
       await prisma.culturalObject.updateMany({ where: { id: { in: ids } }, data: { status: "HIDDEN", verifiedAt: null } });
       await noticeVisits(await upcomingVisits({ objectId: { in: ids } }), "Tempat ini tidak lagi tersedia di KalcerPlanner.", true);
     }
+    // Produk UMKM milik akun ini disembunyikan.
+    await prisma.umkmProduct.updateMany({ where: { ownerId: user.id }, data: { status: "HIDDEN", verifiedAt: null } });
     if (ownedEvents.length > 0) {
       const ids = ownedEvents.map((e) => e.id);
       await prisma.culturalEvent.updateMany({ where: { id: { in: ids } }, data: { status: "HIDDEN", verifiedAt: null } });
