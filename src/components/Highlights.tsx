@@ -24,6 +24,8 @@ export default function Highlights({ items }: { items: HighlightItem[] }) {
     return () => clearInterval(timer);
   }, [items.length]);
 
+  if (items.length === 0) return null;
+
   const visible = Array.from({ length: Math.min(PER_PAGE, items.length) }, (_, i) => items[(start + i) % items.length]);
 
   return (
