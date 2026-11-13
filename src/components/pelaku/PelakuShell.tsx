@@ -4,7 +4,7 @@ import LogoutButton from "@/components/pelaku/LogoutButton";
 import PelakuSidebar from "@/components/pelaku/PelakuSidebar";
 import type { CurrentUser } from "@/lib/auth";
 
-/** Kerangka dasbor pelaku budaya (/destinasi) dan kurator (/admin): logo + akun di atas, sidebar di kiri, tanpa navbar situs. */
+/** Kerangka dasbor pelaku budaya (/destinasi), pelaku UMKM (/produk), dan kurator (/admin): logo + akun di atas, sidebar di kiri, tanpa navbar situs. */
 export default function PelakuShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-white font-sans text-[#1e1e1e]">
@@ -21,7 +21,7 @@ export default function PelakuShell({ user, children }: { user: CurrentUser; chi
       </header>
 
       <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-6 px-4 pb-10 sm:px-8 lg:flex-row lg:gap-10">
-        <PelakuSidebar isAdmin={user.role === "ADMIN"} />
+        <PelakuSidebar role={user.role === "ADMIN" || user.role === "UMKM" ? user.role : "PRACTITIONER"} />
         <main className="min-w-0 flex-1">{children}</main>
       </div>
 
