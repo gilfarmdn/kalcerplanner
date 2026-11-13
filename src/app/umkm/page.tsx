@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import SiteShell from "@/components/SiteShell";
 import UmkmGallery from "@/components/UmkmGallery";
-import { umkmProducts } from "@/lib/content";
+import { getUmkmProducts } from "@/lib/umkm";
 
 export const metadata: Metadata = { title: "Galeri UMKM — KalcerPlanner" };
 export const dynamic = "force-dynamic";
@@ -16,10 +16,14 @@ function shuffle<T>(list: T[]): T[] {
   return a;
 }
 
-export default function UmkmPage() {
+export default async function UmkmPage() {
+  const products = await getUmkmProducts().catch((error) => {
+    console.error("[umkm] database unavailable", error);
+    return [];
+  });
   return (
     <SiteShell>
-      <UmkmGallery products={shuffle(umkmProducts)} />
+      <UmkmGallery products={shuffle(products)} />
     </SiteShell>
   );
 }
