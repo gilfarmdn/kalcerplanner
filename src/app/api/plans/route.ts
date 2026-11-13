@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { fail, firstIssue, readBody } from "@/lib/api";
 import { getPlannerEvents, getPlannerObjects } from "@/lib/culture-db";
-import { buildPlans } from "@/lib/planner";
+import { pickSouvenirs } from "@/lib/content";
+import { buildPlans, planZones } from "@/lib/planner";
+import { getUmkmProducts } from "@/lib/umkm";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { planInputSchema } from "@/lib/validators";
 
@@ -22,7 +24,12 @@ export async function POST(req: Request) {
   try {
     const [objects, events] = await Promise.all([getPlannerObjects(), getPlannerEvents()]);
     if (objects.length === 0) return fail("Data budaya belum tersedia. Jalankan seed database.", 503);
-    return NextResponse.json({ plans: buildPlans(objects, events, parsed.data) });
+    const plans = buildPlans(objects, events, parsed.data);
+    // Saran oleh-oleh: produk UMKM dari wilayah yang sama dengan tempat-tempat di tiap rencana.
+    const products = parsed.data.includeSouvenir ? await getUmkmProducts() : [];
+    return NextResponse.json({
+      plans: plans.map((plan) => ({ ...plan, souvenirs: pickSouvenirs(plan.souvenirAllowance, planZones(plan), products) })),
+    });
   } catch (error) {
     console.error("[plans] failed", error);
     return fail("Gagal menyusun rencana", 500);
