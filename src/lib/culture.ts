@@ -117,8 +117,6 @@ export const monthNames = [
 
 export const SOURCE_NOTE_SUBMITTED = "Diajukan pelaku budaya melalui KalcerPlanner";
 
-export const ZONES =["Kota Yogyakarta", "Sleman", "Bantul", "Gunungkidul", "Kulon Progo"] as const;
-
 /**
  * Cost assumptions. These are *estimates* shown to the user as such — tune them or replace with real data.
  */
